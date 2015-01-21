@@ -1,10 +1,10 @@
 <pre style="display:inline-block;line-height:13px;">
-  ________                    .__      __________.___  ________ 
- /  _____/___________  ______ |  |__   \______   \   |/  _____/ 
-/   \  __\_  __ \__  \ \____ \|  |  \   |    |  _/   /   \  ___ 
-\    \_\  \  | \// __ \|  |_> >   Y  \  |    |   \   \    \_\  \
- \______  /__|  (____  /   __/|___|  /  |______  /___|\______  /
-        \/           \/|__|        \/          \/            \/ 
+  ________                    .__   __________.___  ________ 
+ /  _____/___________  ______ |  |__\______   \   |/  _____/ 
+/   \  __\_  __ \__  \ \____ \|  |  \|    |  _/   /   \  ___ 
+\    \_\  \  | \// __ \|  |_> >   Y  \    |   \   \    \_\  \
+ \______  /__|  (____  /   __/|___|  /______  /___|\______  /
+        \/           \/|__|        \/       \/            \/ 
 </pre>
 
 # GraphBIG
@@ -51,17 +51,7 @@ GraphBIG contains the following main features
 - Standalone package: _can be compiled without external libraries_
 - Perf tools: _provides tools to profile the code section of interest with hardware performance counters ([libpfm] code is integrated)_ 
 
-### License
-MIT license
 
-### Version
-1.0
-
-### Authors
-Lifeng Nai, Georgia Tech (lnai3 _at_ gatech _dot_ edu / lifeng _at_ us _dot_ ibm _dot_ com)  
-Yinglong Xia, IBM T.J. Watson Research Center (yxia _at_ us _dot_ ibm _dot_ com)  
-Ilie G Tanase, IBM T.J. Watson Research Center  
-Hyesoon Kim, Georgia Tech
 
 ### Compile/Run
 
@@ -77,6 +67,12 @@ $ make run
 $ cat output.log
 ```
 
+### Authors
+Lifeng Nai, Georgia Tech (lnai3 _at_ gatech _dot_ edu / lifeng _at_ us _dot_ ibm _dot_ com)  
+Yinglong Xia, IBM T.J. Watson Research Center (yxia _at_ us _dot_ ibm _dot_ com)  
+Ilie G Tanase, IBM T.J. Watson Research Center  
+Hyesoon Kim, Georgia Tech
+
 ### Development
 
 Want to contribute? Great!
@@ -85,7 +81,11 @@ GraphBIG benchmarks and underlying framework are pure C++ codes with a bit STL.
 You are more than welcome to contribute new workloads, new datasets, or new tools. Please
 feel free to contact us. 
 
+### License
+MIT license
 
+### Version
+1.0
 
 **Graph Computing, Hell Yeah!**
 
