@@ -30,7 +30,7 @@ In addition, GraphBIG also provides real-world data
 sets covering major graph data sources and a synthetic data set
 for characterization purposes. 
 
-GraphBIG contains two branches, __commercial branch__ and __community branch__.
+GraphBIG contains two branches, commercial branch and community branch.
 The benchmarks of GraphBIG was initially built on the
 IBM System G framework to represent real-world graph computing practices.
 Later, for the open-source purpose, a community branch was established
@@ -38,8 +38,8 @@ by designing a new graph middleware, the openG framework.
 Both branches are sharing similar workloads and datasets. Their underlying frameworks
 also show similar architectural behaviors. 
 
-The community branch is released here. 
-For packages of the commercial branch, please contact [IBM System G].
+The __community branch__ is released here. 
+For packages of the __commercial branch__, please contact [IBM System G].
 
 ### Features
 GraphBIG contains the following main features
@@ -68,10 +68,11 @@ $ cat output.log
 ```
 
 ### Authors
-Lifeng Nai, Georgia Tech (lnai3 _at_ gatech _dot_ edu / lifeng _at_ us _dot_ ibm _dot_ com)  
-Yinglong Xia, IBM T.J. Watson Research Center (yxia _at_ us _dot_ ibm _dot_ com)  
-Ilie G Tanase, IBM T.J. Watson Research Center  
-Hyesoon Kim, Georgia Tech
+- Lifeng Nai, Georgia Tech (lnai3 _at_ gatech _dot_ edu / lifeng _at_ us _dot_ ibm _dot_ com)  
+- Yinglong Xia, IBM T.J. Watson Research Center (yxia _at_ us _dot_ ibm _dot_ com)  
+- Ilie G. Tanase, IBM T.J. Watson Research Center  
+- Hyesoon Kim, Georgia Tech  
+- Ching-Yung Lin, IBM T.J. Watson Research Center
 
 ### Development
 
