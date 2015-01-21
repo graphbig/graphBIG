@@ -1,0 +1,34 @@
+# ignore generated object files
+*.o
+*.a
+*.so
+a.out
+
+# ignore temp files
+*.swap
+*~
+output.log
+
+# ignore ctags file
+tags
+
+# ignore executable files
+bfs
+dfs
+dc
+connectedcomponent
+bc
+tc
+dijkstra
+kcore
+graphupdate
+graphconstruct
+moralization
+ubench_add
+ubench_delete
+ubench_find
+ubench_traverse
+
+# ignore untar libpfm sources
+benchmark/tools/libpfm-4.5.0
+
