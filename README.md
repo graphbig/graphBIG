@@ -83,7 +83,7 @@ You are more than welcome to contribute new workloads, new datasets, or new tool
 feel free to contact us. 
 
 ### License
-MIT license
+BSD license
 
 ### Version
 1.0
