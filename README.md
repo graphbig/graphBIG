@@ -8,8 +8,7 @@
 </pre>
 
 # GraphBIG
-GraphBIG is a comprehensive graph benchmarking effort inspired from IBM __System G__ and Georgia Tech __HPArch__. It covers the broad spectrum of graph computing by fulfilling multiple major requirements, including __framework__, 
-__representativeness__, __coverage__, and graph __data support__.
+GraphBIG is a comprehensive graph benchmarking effort initiated by IBM __System G__ and Georgia Tech __HPArch__. It covers the broad spectrum of graph computing by fulfilling multiple major requirements, including __framework__, __representativeness__, __coverage__, and graph __data support__.
 
 | | | |
 |:----:|---|----|
@@ -55,8 +54,6 @@ GraphBIG contains the following main features
 
 ### Compile/Run
 
-Only requirement: your gcc/g++ needs to support c++0x.
-
 ```sh
 $ git clone [git-repo-url] GraphBIG
 $ cd GraphBIG
@@ -67,12 +64,12 @@ $ make run
 $ cat output.log
 ```
 
-### Authors
-- Lifeng Nai, Georgia Tech (lnai3 _at_ gatech _dot_ edu / lifeng _at_ us _dot_ ibm _dot_ com)  
-- Yinglong Xia, IBM T.J. Watson Research Center (yxia _at_ us _dot_ ibm _dot_ com)  
-- Ilie G. Tanase, IBM T.J. Watson Research Center  
-- Hyesoon Kim, Georgia Tech  
-- Ching-Yung Lin, IBM T.J. Watson Research Center
+### Contributors
+- Lifeng Nai, _Georgia Tech_ (lnai3 _at_ gatech.edu / lifeng _at_ us.ibm.com)  
+- Yinglong Xia, _IBM Thomas J. Watson Research Center_ (yxia _at_ us _dot_ ibm _dot_ com)  
+- Ilie G. Tanase, _IBM Thomas J. Watson Research Center_  
+- Hyesoon Kim, _Georgia Tech_  
+- Ching-Yung Lin, _IBM Thomas J. Watson Research Center_
 
 ### Development
 
@@ -87,6 +84,14 @@ BSD license
 
 ### Version
 1.0
+
+### Upcoming
+__GraphBIG-GPU__ is on its way now! With the upcoming GPU support, 
+GraphBIG will enable the exploration of graph computing 
+on heterogeneous platforms. 
+
+### Contact us
+Lifeng Nai (lnai3 _at_ gatech.edu)
 
 **Graph Computing, Hell Yeah!**
 
