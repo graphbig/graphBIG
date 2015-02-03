@@ -24,10 +24,6 @@ kcore
 graphupdate
 graphconstruct
 moralization
-ubench_add
-ubench_delete
-ubench_find
-ubench_traverse
 
 # ignore untar libpfm sources
 benchmark/tools/libpfm-4.5.0
