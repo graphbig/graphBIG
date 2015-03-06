@@ -20,16 +20,11 @@ $ cat output.log
 [../dataset]    data sets
 [../openG]      graph library files
 ========================================
-[Version] 1.0
+[Version] 1.2
 ========================================
 [UPCOMING]
 
-We are working on the open-soucing of
-parallel/concurrent benchmarks of 
-commercial branch. They'll be released 
-soon.
-
-GraphBIG-GPU benchmarks will also be 
-released in near future.
+GPU benchmarks will be released in
+April 2015.
 ========================================
 

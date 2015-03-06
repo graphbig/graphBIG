@@ -8,7 +8,7 @@
 #include "../lib/common.h"
 #include "../lib/def.h"
 #include "openG.h"
-
+#include "omp.h"
 #include <stack>
 #include <queue>
 #include <vector>
@@ -43,12 +43,14 @@ struct arg_t
 {
     string dataset_path;
     bool skip;
+    unsigned threadnum;
 };
 
 void arg_init(arg_t& arguments)
 {
     arguments.dataset_path.clear();
     arguments.skip = false;
+    arguments.threadnum = 1;
 }
 
 void arg_parser(arg_t& arguments, vector<string>& inputarg)
@@ -64,6 +66,11 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
         else if (inputarg[i]=="--skip") 
         {
             arguments.skip = true;
+        }
+        else if (inputarg[i]=="--threadnum")
+        {
+            i++;
+            arguments.threadnum=atol(inputarg[i].c_str());
         }
         else 
         {
@@ -159,6 +166,97 @@ void bc(graph_t& g)
     return;
 }
 
+void parallel_bc(graph_t& g, unsigned threadnum)
+{
+    typedef list<size_t> vertex_list_t;
+    size_t vnum = g.num_vertices();
+    
+    uint64_t chunk = (unsigned)ceil(vnum/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > vnum) end = vnum;
+        
+        // initialization
+        vector<vertex_list_t> shortest_path_parents(vnum);
+        vector<size_t> num_of_paths(vnum);
+        vector<int8_t> depth_of_vertices(vnum); // 8 bits signed
+        vector<double> centrality_update(vnum);
+
+        for (uint64_t vid=start;vid<end;vid++) 
+        {
+            size_t vertex_s = vid;
+            stack<size_t> order_seen_stack;
+            queue<size_t> BFS_queue;
+
+            BFS_queue.push(vertex_s);
+
+            for (size_t i=0;i<vnum;i++) 
+            {
+                shortest_path_parents[i].clear();
+
+                num_of_paths[i] = (i==vertex_s) ? 1 : 0;
+                depth_of_vertices[i] = (i==vertex_s) ? 0: -1;
+                centrality_update[i] = 0;
+            }
+
+            // BFS traversal
+            while (!BFS_queue.empty()) 
+            {
+                size_t v = BFS_queue.front();
+                BFS_queue.pop();
+                order_seen_stack.push(v);
+
+                vertex_iterator vit = g.find_vertex(v);
+
+                for (edge_iterator eit=vit->edges_begin(); eit!= vit->edges_end(); eit++) 
+                {
+                    size_t w = eit->target();
+                    if (depth_of_vertices[w]<0) 
+                    {
+                        BFS_queue.push(w);
+                        depth_of_vertices[w] = depth_of_vertices[v] + 1;
+                    }
+
+                    if (depth_of_vertices[w] == (depth_of_vertices[v] + 1)) 
+                    {
+                        num_of_paths[w] += num_of_paths[v];
+                        shortest_path_parents[w].push_back(v);
+                    }
+                }
+
+            }
+
+            // dependency accumulation
+            while (!order_seen_stack.empty()) 
+            {
+                size_t w = order_seen_stack.top();
+                order_seen_stack.pop();
+
+                vertex_list_t::iterator iter;
+                for (iter=shortest_path_parents[w].begin(); 
+                        iter!=shortest_path_parents[w].end(); iter++) 
+                {
+                    size_t v=*iter;
+
+                    centrality_update[v] += (num_of_paths[v]/(double)num_of_paths[w])
+                        *(1+centrality_update[w]);
+                }
+
+                if (w!=vertex_s) 
+                {
+                    vertex_iterator vit = g.find_vertex(w);
+                    #pragma omp atomic
+                    vit->property().BC += centrality_update[w];
+                }
+            }
+        }
+    }
+    return;
+}
 //==============================================================//
 void output(graph_t& g)
 {
@@ -218,7 +316,10 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     perf.start();
 
-    bc(graph);
+    if (arguments.threadnum==1)
+        bc(graph);
+    else
+        parallel_bc(graph, arguments.threadnum);
 
     perf.stop();
     t2 = timer::get_usec();

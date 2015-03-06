@@ -6,7 +6,7 @@
 #include "../lib/common.h"
 #include "../lib/def.h"
 #include "openG.h"
-
+#include "omp.h"
 #include <set>
 #include <vector>
 
@@ -39,11 +39,13 @@ typedef graph_t::edge_iterator      edge_iterator;
 struct arg_t
 {
     string dataset_path;
+    unsigned threadnum;
 };
 
 void arg_init(arg_t& arguments)
 {
     arguments.dataset_path.clear();
+    arguments.threadnum=1;
 }
 
 void arg_parser(arg_t& arguments, vector<string>& inputarg)
@@ -55,6 +57,11 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
         {
             i++;
             arguments.dataset_path=inputarg[i];
+        }
+        else if (inputarg[i]=="--threadnum")
+        {
+            i++;
+            arguments.threadnum=atol(inputarg[i].c_str());
         }
         else
         {
@@ -134,6 +141,65 @@ size_t triangle_count(graph_t& g)
 
     return ret;
 }
+size_t parallel_triangle_count(graph_t& g, unsigned threadnum)
+{
+    size_t ret=0;
+    uint64_t chunk = (unsigned)ceil(g.num_vertices()/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > g.num_vertices()) end = g.num_vertices();
+
+        // prepare neighbor set for each vertex        
+        for (uint64_t vid=start;vid<end;vid++)
+        {
+            vertex_iterator vit = g.find_vertex(vid);
+            
+            vit->property().count = 0;
+            set<uint64_t> & cur_set = vit->property().neighbor_set;
+            for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
+            {
+                cur_set.insert(eit->target());
+            }
+        }
+        #pragma omp barrier
+        // run triangle count now
+        for (uint64_t vid=start;vid<end;vid++)
+        {
+            vertex_iterator vit = g.find_vertex(vid);
+
+            set<uint64_t> & src_set = vit->property().neighbor_set;
+
+            for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
+            {
+                if (vit->id() > eit->target()) continue; // skip reverse edges
+                vertex_iterator vit_targ = g.find_vertex(eit->target());
+
+                set<uint64_t> & dest_set = vit_targ->property().neighbor_set;
+                size_t cnt = get_intersect_cnt(src_set, dest_set);
+
+                __sync_fetch_and_add(&(vit->property().count), cnt);
+                __sync_fetch_and_add(&(vit_targ->property().count), cnt);
+            }
+        }
+        #pragma omp barrier 
+        // tune the per-vertex count
+        for (uint64_t vid=start;vid<end;vid++)
+        {
+            vertex_iterator vit = g.find_vertex(vid);
+            vit->property().count /= 2;
+            __sync_fetch_and_add(&ret, vit->property().count);
+        }
+    }
+
+
+    ret /= 3;
+
+    return ret;
+}
 
 void output(graph_t& g)
 {
@@ -183,7 +249,10 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     perf.start();
 
-    tcount = triangle_count(graph);
+    if (arguments.threadnum==1)
+        tcount = triangle_count(graph);
+    else
+        tcount = parallel_triangle_count(graph, arguments.threadnum);
 
     perf.stop();
     t2 = timer::get_usec();

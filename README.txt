@@ -29,11 +29,20 @@ $ cat output.log
 
 <dataset>       data set files
 <openG>         graph library
-<benchmark>     benchmark workloads
+<benchmark>     workloads
 ===============================================================
-We are working on the open-soucing of parallel/concurrent 
-benchmarks of commercial branch. They'll be released soon.
+[Workloads]
 
-GraphBIG-GPU benchmarks will also be released in near future.
+11 benchmarks & 4 micro-benchmarks
+===============================================================
+[Dataset]
+
+A small size test data is included with the source code. Please 
+check the wiki pages of our github repo for the download links
+of other datasets. 
+===============================================================
+[Upcoming]
+
+GPU benchmarks will be released in April 2015.
 ===============================================================
 

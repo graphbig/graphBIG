@@ -11,13 +11,16 @@
 #include "../lib/def.h"
 #include "openG.h"
 #include <queue>
+#include "omp.h"
+
+#define MY_INFINITY 0xffffff00
 
 using namespace std;
 
 class vertex_property
 {
 public:
-    vertex_property():root(0),distance(INFu64),predecessor(INFu64){}
+    vertex_property():root(0),distance(MY_INFINITY),predecessor(MY_INFINITY){}
 
     uint64_t root;
 
@@ -42,14 +45,14 @@ struct arg_t
 {
     string dataset_path;
     size_t root_vid;
-    size_t targ_vid;
+    unsigned threadnum;
 };
 
 void arg_init(arg_t& arguments)
 {
     arguments.root_vid = 0;
     arguments.dataset_path.clear();
-    arguments.targ_vid = INFu64;
+    arguments.threadnum = 1;
 }
 
 void arg_parser(arg_t& arguments, vector<string>& inputarg)
@@ -62,10 +65,10 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
             i++;
             arguments.root_vid=atol(inputarg[i].c_str());
         }
-        else if (inputarg[i]=="--target") 
+        else if (inputarg[i]=="--threadnum")
         {
             i++;
-            arguments.targ_vid=atol(inputarg[i].c_str());
+            arguments.threadnum=atol(inputarg[i].c_str());
         }
         else if (inputarg[i]=="--dataset") 
         {
@@ -93,7 +96,7 @@ public:
 };
 
 
-void dijkstra(graph_t& g, size_t src, size_t targ)
+void dijkstra(graph_t& g, size_t src)
 {
     priority_queue<data_pair, vector<data_pair>, comp> PQ;
     
@@ -101,8 +104,8 @@ void dijkstra(graph_t& g, size_t src, size_t targ)
     for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
         vit->property().root = src;
-        vit->property().distance = INFu64;
-        vit->property().predecessor = INFu64;
+        vit->property().distance = MY_INFINITY;
+        vit->property().predecessor = MY_INFINITY;
     }
 
     vertex_iterator src_vit = g.find_vertex(src);
@@ -115,7 +118,6 @@ void dijkstra(graph_t& g, size_t src, size_t targ)
     {
         size_t u = PQ.top().first; 
         PQ.pop();
-        if (targ == u) break;
 
         vertex_iterator u_vit = g.find_vertex(u);
 
@@ -136,6 +138,97 @@ void dijkstra(graph_t& g, size_t src, size_t targ)
 
     return;
 }
+
+inline unsigned vertex_distributor(uint64_t vid, unsigned threadnum)
+{
+    return vid%threadnum;
+}
+void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum)
+{
+    vertex_iterator rootvit=g.find_vertex(root);
+    rootvit->property().root = root;
+    rootvit->property().distance = 0;
+    
+    vector<uint32_t> update(g.num_vertices(), MY_INFINITY);
+    update[root] = 0;
+
+    bool * locks = new bool[g.num_vertices()];
+    memset(locks, 0, sizeof(bool)*g.num_vertices()); 
+
+    vector<vector<uint64_t> > global_input_tasks(threadnum);
+    global_input_tasks[vertex_distributor(root,threadnum)].push_back(root);
+    
+    vector<vector<uint64_t> > global_output_tasks(threadnum*threadnum);
+
+    
+    bool stop = false;
+    #pragma omp parallel num_threads(threadnum) shared(stop,global_input_tasks,global_output_tasks) 
+    {
+        unsigned tid = omp_get_thread_num();
+        vector<uint64_t> & input_tasks = global_input_tasks[tid];
+        
+        while(!stop)
+        {
+            #pragma omp barrier
+            // process local queue
+            stop = true;
+            
+            for (unsigned i=0;i<input_tasks.size();i++)
+            {
+                uint64_t vid=input_tasks[i];
+                vertex_iterator vit = g.find_vertex(vid);
+
+                uint64_t curr_dist = vit->property().distance;
+                for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
+                {
+                    uint64_t dest_vid = eit->target();
+                    vertex_iterator dvit = g.find_vertex(dest_vid);
+                    uint32_t new_dist = curr_dist + eit->property().weight;
+                    bool active=false;
+                    
+                    // spinning lock for critical section
+                    //  can be replaced as an atomicMin operation
+                    while(__sync_lock_test_and_set(&(locks[dest_vid]),1));
+                    if (update[dest_vid]>new_dist) 
+                    {
+                        active = true;
+                        update[dest_vid] = new_dist;
+                        dvit->property().predecessor = vid;
+                    }
+                    __sync_lock_release(&(locks[dest_vid]));
+                    
+                    if (active)
+                    {
+                        global_output_tasks[vertex_distributor(dest_vid,threadnum)+tid*threadnum].push_back(dest_vid);
+                    }
+                }
+            }
+            #pragma omp barrier
+            input_tasks.clear();
+            for (unsigned i=0;i<threadnum;i++)
+            {
+                if (global_output_tasks[i*threadnum+tid].size()!=0)
+                {
+                    stop = false;
+                    input_tasks.insert(input_tasks.end(),
+                            global_output_tasks[i*threadnum+tid].begin(),
+                            global_output_tasks[i*threadnum+tid].end());
+                    global_output_tasks[i*threadnum+tid].clear();
+                }
+            }
+            for (unsigned i=0;i<input_tasks.size();i++) 
+            {
+                vertex_iterator vit = g.find_vertex(input_tasks[i]);
+                vit->property().distance = update[input_tasks[i]];
+            }
+            #pragma omp barrier
+        }
+    }
+
+
+    delete[] locks;
+}
+
 //==============================================================//
 void output(graph_t& g)
 {
@@ -144,15 +237,15 @@ void output(graph_t& g)
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
         cout<<"== vertex "<<vit->id()<<": distance-";
-        if (vit->property().distance == INFu64) 
+        if (vit->property().distance == MY_INFINITY) 
             cout<<"INF";
         else
             cout<<vit->property().distance;
-        cout<<" predecessor-";
-        if (vit->property().predecessor == INFu64)
-            cout<<"UNDEFINED";
-        else
-            cout<<vit->property().predecessor;
+        //cout<<" predecessor-";
+        //if (vit->property().predecessor == MY_INFINITY)
+        //    cout<<"UNDEFINED";
+        //else
+        //    cout<<vit->property().predecessor;
 
         cout<<"\n";
     }
@@ -194,7 +287,6 @@ int main(int argc, char * argv[])
 
     // input arguments
     size_t root = arguments.root_vid;
-    size_t targ = arguments.targ_vid;
 
     // sanity check
     if (graph.find_vertex(root)==graph.vertices_end()) 
@@ -205,14 +297,15 @@ int main(int argc, char * argv[])
 
  
     cout<<"Shortest Path: source-"<<root;
-    if (targ != INFu64)
-        cout<<"  target-"<<targ;
     cout<<"...\n";
     t1 = timer::get_usec();
     perf.start();
 
-    dijkstra(graph, root, targ);
-
+    if (arguments.threadnum==1)
+        dijkstra(graph, root);
+    else
+        parallel_dijkstra(graph, root, arguments.threadnum);
+    
     perf.stop();
     t2 = timer::get_usec();
 

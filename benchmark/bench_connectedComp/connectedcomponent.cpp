@@ -6,17 +6,21 @@
 #include "../lib/common.h"
 #include "../lib/def.h"
 #include "openG.h"
-
+#include "omp.h"
 #include <queue>
 
+#define EDGE_MARK 1
+#define MY_INFINITY 0xffffff00
+
 using namespace std;
+
 
 class vertex_property
 {
 public:
-    vertex_property():color(COLOR_WHITE),label(0){}
+    vertex_property():level(MY_INFINITY),label(0){}
 
-    uint8_t color;
+    unsigned level;
     uint64_t label;
 };
 class edge_property
@@ -37,11 +41,13 @@ typedef graph_t::edge_iterator      edge_iterator;
 struct arg_t
 {
     string dataset_path;
+    unsigned threadnum;
 };
 
 void arg_init(arg_t& arguments)
 {
     arguments.dataset_path.clear();
+    arguments.threadnum = 1;
 }
 
 void arg_parser(arg_t& arguments, vector<string>& inputarg)
@@ -54,6 +60,11 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
             i++;
             arguments.dataset_path=inputarg[i];
         }
+        else if (inputarg[i]=="--threadnum")
+        {
+            i++;
+            arguments.threadnum=atol(inputarg[i].c_str());
+        }
         else
         {
             cerr<<"wrong argument: "<<inputarg[i]<<endl;
@@ -64,6 +75,73 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
 }
 
 //==============================================================//
+inline unsigned vertex_distributor(size_t vid, unsigned threadnum)
+{
+    return vid%threadnum;
+}
+void parallel_bfs(graph_t& g, size_t root, unsigned threadnum)
+{
+    // initializzation
+    vertex_iterator rootvit=g.find_vertex(root);
+    if (rootvit==g.vertices_end()) return;
+
+    rootvit->property().level = 0;
+    rootvit->property().label = root;
+
+    vector<vector<uint64_t> > global_input_tasks(threadnum);
+    global_input_tasks[vertex_distributor(root, threadnum)].push_back(root);
+    
+    vector<vector<uint64_t> > global_output_tasks(threadnum*threadnum);
+
+    bool stop = false;
+    #pragma omp parallel num_threads(threadnum) shared(stop,global_input_tasks,global_output_tasks) 
+    {
+        unsigned tid = omp_get_thread_num();
+        vector<uint64_t> & input_tasks = global_input_tasks[tid];
+        
+        while(!stop)
+        {
+            #pragma omp barrier
+            // process local queue
+            stop = true;
+            
+        
+            for (unsigned i=0;i<input_tasks.size();i++)
+            {
+                uint64_t vid=input_tasks[i];
+                vertex_iterator vit = g.find_vertex(vid);
+                uint32_t curr_level = vit->property().level;
+                
+                for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
+                {
+                    uint64_t dest_vid = eit->target();
+                    vertex_iterator destvit = g.find_vertex(dest_vid);
+                    if (__sync_bool_compare_and_swap(&(destvit->property().level), 
+                                MY_INFINITY,curr_level+1))
+                    {
+                        destvit->property().label = root;
+                        global_output_tasks[vertex_distributor(dest_vid,threadnum)+tid*threadnum].push_back(dest_vid);
+                    }
+                }
+            }
+            #pragma omp barrier
+            input_tasks.clear();
+            for (unsigned i=0;i<threadnum;i++)
+            {
+                if (global_output_tasks[i*threadnum+tid].size()!=0)
+                {
+                    stop = false;
+                    input_tasks.insert(input_tasks.end(),
+                            global_output_tasks[i*threadnum+tid].begin(),
+                            global_output_tasks[i*threadnum+tid].end());
+                    global_output_tasks[i*threadnum+tid].clear();
+                }
+            }
+            #pragma omp barrier
+
+        }
+    }
+}
 void bfs_component(graph_t& g, size_t root) 
 {
     std::queue<vertex_iterator> vertex_queue;
@@ -72,7 +150,7 @@ void bfs_component(graph_t& g, size_t root)
     if (iter == g.vertices_end()) 
         return;
 
-    iter->property().color = COLOR_GREY;
+    iter->property().level = 0;
     iter->property().label = root;
 
     vertex_queue.push(iter);
@@ -85,27 +163,28 @@ void bfs_component(graph_t& g, size_t root)
         {
             vertex_iterator v = g.find_vertex(ei->target()); 
 
-            uint64_t v_color = v->property().color;
-            if (v_color == COLOR_WHITE) 
+            if (v->property().level == MY_INFINITY) 
             {
-                v->property().color = COLOR_GREY;
+                v->property().level = u->property().level+1;
                 v->property().label = root;
                 vertex_queue.push(v);
             } 
         }  // end for
-        u->property().color = COLOR_BLACK;         
     }  // end while
 }  // end bfs_component
 
-size_t connected_component(graph_t& g)
+size_t connected_component(graph_t& g, unsigned threadnum)
 {
     size_t ret=0;
 
     for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
-        if (vit->property().color == COLOR_WHITE) 
+        if (vit->property().level == MY_INFINITY) 
         {
-            bfs_component(g,vit->id());
+            if (threadnum==1) 
+                bfs_component(g, vit->id());
+            else
+                parallel_bfs(g, vit->id(), threadnum);
             ret++;
         }
     }
@@ -159,7 +238,7 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     perf.start();
 
-    component_num = connected_component(graph);
+    component_num = connected_component(graph, arguments.threadnum);
 
     perf.stop();
     t2 = timer::get_usec();

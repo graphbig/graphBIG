@@ -1,6 +1,6 @@
 ROOT=../..
-TARGET=moralization
-OBJS=moralization.o 
+TARGET=topomorph
+OBJS=topomorph.o 
 RUN_ARGS=--dataset $(ROOT)/dataset/small
 
 include ../common.mk

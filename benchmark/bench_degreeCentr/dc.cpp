@@ -4,8 +4,9 @@
 #include "../lib/common.h"
 #include "../lib/def.h"
 #include "openG.h"
-
+#include <math.h>
 #include <stack>
+#include "omp.h"
 
 using namespace std;
 
@@ -36,11 +37,13 @@ typedef graph_t::edge_iterator      edge_iterator;
 struct arg_t
 {
     string dataset_path;
+    unsigned threadnum;
 };
 
 void arg_init(arg_t& arguments)
 {
     arguments.dataset_path.clear();
+    arguments.threadnum = 1;
 }
 
 void arg_parser(arg_t& arguments, vector<string>& inputarg)
@@ -53,6 +56,11 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
             i++;
             arguments.dataset_path=inputarg[i];
         }
+        else if (inputarg[i]=="--threadnum")
+        {
+            i++;
+            arguments.threadnum=atol(inputarg[i].c_str());
+        } 
         else
         {
             cerr<<"wrong argument: "<<inputarg[i]<<endl;
@@ -80,6 +88,34 @@ void dc(graph_t& g)
         }
     }
 }// end dc
+void parallel_dc(graph_t& g, unsigned threadnum)
+{
+    uint64_t chunk = (unsigned)ceil(g.num_vertices()/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > g.num_vertices()) end = g.num_vertices();
+
+        for (unsigned vid=start;vid<end;vid++)
+        {
+            vertex_iterator vit = g.find_vertex(vid);
+            // out degree
+            vit->property().outdegree = vit->edges_size();
+
+            // in degree
+            edge_iterator eit;
+            for (eit=vit->edges_begin(); eit!=vit->edges_end(); eit++) 
+            {
+                vertex_iterator targ = g.find_vertex(eit->target());
+                __sync_fetch_and_add(&(targ->property().indegree), 1);
+            }
+
+        }
+    }
+}
 void degree_analyze(graph_t& g, 
                     uint64_t& indegree_max, uint64_t& indegree_min,
                     uint64_t& outdegree_max, uint64_t& outdegree_min)
@@ -156,11 +192,15 @@ int main(int argc, char * argv[])
     perf.start();
     uint64_t indegree_max, indegree_min, outdegree_max, outdegree_min;
 
-    dc(graph);
-    degree_analyze(graph, indegree_max, indegree_min, outdegree_max, outdegree_min);
+    if (arguments.threadnum==1)
+        dc(graph);
+    else
+        parallel_dc(graph, arguments.threadnum);
 
     perf.stop();
     t2 = timer::get_usec();
+    
+    degree_analyze(graph, indegree_max, indegree_min, outdegree_max, outdegree_min);
 
     cout<<"DC finish: \n";
     cout<<"== inDegree[Max-"<<indegree_max<<" Min-"<<indegree_min

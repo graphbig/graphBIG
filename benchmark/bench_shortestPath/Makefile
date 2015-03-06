@@ -1,7 +1,8 @@
 ROOT=../..
 TARGET=dijkstra
 OBJS=dijkstra.o 
-RUN_ARGS=--dataset $(ROOT)/dataset/small --root 31 
+RUN_ARGS=--threadnum 1 --dataset $(ROOT)/dataset/small --root 31 
+EXTRA_CXX_FLAGS+=-fopenmp
 
 include ../common.mk
 
