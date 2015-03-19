@@ -1,0 +1,22 @@
+[Compile]
+
+make clean all
+
+To enable result output for verification:
+make clean; make OUTPUT=on all;
+
+To enable debug flag:
+make clean; make DEBUG=1 all;
+
+
+Please check comments in each .cu file 
+    for detailed explanations
+
+
+[Run]
+
+Run bfs_topo_frontier:
+make run
+
+Check RUN_ARGS in Makefile for execution arguments
+

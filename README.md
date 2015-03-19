@@ -8,7 +8,8 @@
 </pre>
 
 # GraphBIG
-GraphBIG is a graph benchmarking effort initiated by IBM __System G__ and Georgia Tech __HPArch__. It covers the broad spectrum of graph computing by fulfilling multiple major requirements, including __framework__, __representativeness__, __coverage__, and graph __data support__.
+GraphBIG is a graph benchmarking effort initiated by IBM __System G__ and Georgia Tech __HPArch__. By supporting a wide selection of workloads from both __CPU__ and __GPU__ sides,
+GraphBIG covers the broad spectrum of graph computing and fulfills multiple major requirements, including __framework__, __representativeness__, __coverage__, and graph __data support__.
 
 | | | |
 |:----:|---|----|
@@ -39,9 +40,10 @@ For packages of the commercial branch, please contact [IBM System G].
 
 ### Features
 GraphBIG contains the following main features
-- Framework: _based on the property graph framwork from real-world graph computing practices_
+- Framework: _based on the property graph framework from real-world graph computing practices_
 - Representativeness: _workloads are selected from real-world use cases_
 - Coverage: _covers multiple graph computation types, much more than just graph traversal_
+- GPU: _provides GPU workloads under the unified framework_
 - Dataset: _provides both real-world and synthetic datasets_
 - C++ code base: _pure C++ code requiring only C++0x. can be supported by most gcc versions_
 - Standalone package: _can be compiled without external libraries_
@@ -51,10 +53,22 @@ GraphBIG contains the following main features
 
 ### Compile/Run
 
+- CPU benchmarks:
 ```sh
-$ git clone [git-repo-url] GraphBIG
+$ git clone https://github.com/graphbig/graphBIG.git GraphBIG
 $ cd GraphBIG
 $ cd benchmark
+$ make clean all
+$ cd [bench dir]
+$ make run
+$ cat output.log
+```
+
+- GPU benchmarks:
+```sh
+$ git clone https://github.com/graphbig/graphBIG.git GraphBIG
+$ cd GraphBIG
+$ cd gpu_bench
 $ make clean all
 $ cd [bench dir]
 $ make run
@@ -85,12 +99,12 @@ feel free to contact us.
 BSD license
 
 ### Version
-1.4
+2.0
 
 ### Upcoming
-__GraphBIG-GPU__ is on its way now!  With the upcoming GPU support,
-GraphBIG will enable the exploration of graph computing
-on heterogeneous platforms.
+__GraphBIG-GPU__ now has been released!
+
+The profiling tools of GPU side will be released soon.
 
 ### Contact us
 Lifeng Nai (lnai3 _at_ gatech.edu)

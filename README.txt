@@ -8,12 +8,12 @@
 ===============================================================
 [GraphBIG]
 
-GraphBIG is a comprehensive graph benchmarking effort 
-initiated by IBM System G and Georgia Tech HPArch. 
-It covers the broad spectrum of graph computing 
-by fulfilling multiple major requirements, 
-including framework, representativeness, coverage, 
-and graph data support.
+GraphBIG is a graph benchmarking effort initiated by 
+IBM System G and Georgia Tech HPArch. By supporting a 
+wide selection of workloads from both CPU and GPU sides, 
+GraphBIG covers the broad spectrum of graph computing 
+and fulfills multiple major requirements, including framework, 
+representativeness, coverage, and graph data support.
 ===============================================================
 [Compile/Run]
 
@@ -33,16 +33,16 @@ $ cat output.log
 ===============================================================
 [Workloads]
 
+CPU side:
 11 benchmarks & 4 micro-benchmarks
+
+GPU side:
+8 GPU workloads
 ===============================================================
 [Dataset]
 
 A small size test data is included with the source code. Please 
 check the wiki pages of our github repo for the download links
 of other datasets. 
-===============================================================
-[Upcoming]
-
-GPU benchmarks will be released in April 2015.
 ===============================================================
 

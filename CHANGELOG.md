@@ -1,3 +1,7 @@
+## Version 2.0
+- Add GPU workloads
+- Update graph framework for GPU support
+
 ## Version 1.4
 - Add one new benchmark: __Gibbs-Inference__
 - Add Bayesian Network datasets
@@ -15,3 +19,7 @@
 - Profiling tool using hardware performance counter
 
 P.S.
+
+- Odd version number: internal development versions
+
+- Even version number: release versions

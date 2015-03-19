@@ -316,6 +316,48 @@ public:
 
         return edge_num;
     }
+
+    // convert property graph structure to a CSR graph
+    void to_CSR_Graph(std::vector<uint64_t> & vertexlist,
+            std::vector<uint64_t> & degreelist, 
+            std::vector<uint64_t> & edgelist)
+    {
+        vertexlist.clear();
+        degreelist.clear();
+        edgelist.clear();
+
+        // initialize vertex/edge list
+        vertexlist.resize(this->num_vertices(), 0); 
+        degreelist.resize(this->num_vertices(), 0);
+        edgelist.resize(this->num_edges(), 0);
+
+
+        size_t vidx=0;
+        size_t eidx=0;
+        for (vertex_iterator vit=this->vertices_begin();vit!=this->vertices_end();vit++)
+        {
+            vidx = vit->id();
+            // double check in case vector overflow happens
+            if (vidx >= vertexlist.size())
+            {  
+                vertexlist.resize(vidx+1);
+                degreelist.resize(vidx+1);
+            }
+            if (eidx >= edgelist.size())    edgelist.resize(eidx+1);
+
+            degreelist[vidx]=vit->edges_size();
+            if (degreelist[vidx]==0) continue; // skip no-edge vertices
+            
+            vertexlist[vidx]=eidx;
+
+            for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
+            {
+                edgelist[eidx]=eit->target();
+                eidx++;
+            }
+
+        }
+    }
 protected:
     std::tr1::unordered_map<std::string, uint64_t> _key2id;
     std::tr1::unordered_map<uint64_t, std::string> _id2key;

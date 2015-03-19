@@ -20,11 +20,6 @@ $ cat output.log
 [../dataset]    data sets
 [../openG]      graph library files
 ========================================
-[Version] 1.2
-========================================
-[UPCOMING]
-
-GPU benchmarks will be released in
-April 2015.
+[Version] 2.0
 ========================================
 

@@ -23,6 +23,7 @@ enum GLayout
     VV_VE=3     //  vertexlist->vector          edgelist->vector
 };
 
+
 template<class VPROP, class EPROP, GLayout L=ILV_ILE>
 class openG_configure;
 
