@@ -12,10 +12,10 @@ GraphBIG is a graph benchmarking effort initiated by IBM __System G__ and Georgi
 
 | | | |
 |:----:|---|----|
-|__Graph__|:arrow_right:| __Graph__s -- large or small, static or dynamic, topological or semantic, and properties or bayesian |
-|__B__|:arrow_right:|__B__enchmark Suites|
-|__I__|:arrow_right:|__I__BM System G  (http://systemg.research.ibm.com)  |
-|__G__|:arrow_right:|__G__eorgia Tech HPArch (http://comparch.gatech.edu/hparch)|
+|__Graph__|:arrow_right:| **Graph**s -- large or small, static or dynamic, topological or semantic, and properties or bayesian |
+|__B__|:arrow_right:|**B**enchmark Suites|
+|__I__|:arrow_right:|**I**BM System G  (http://systemg.research.ibm.com)  |
+|__G__|:arrow_right:|**G**eorgia Tech HPArch (http://comparch.gatech.edu/hparch)|
 
 ### Introduction
 GraphBIG is a comprehensive benchmark suites for graph computing. The workloads are selected from
