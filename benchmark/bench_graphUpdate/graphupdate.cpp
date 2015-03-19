@@ -139,55 +139,62 @@ int main(int argc, char * argv[])
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
-    srand(SEED); // fix seed to avoid runtime dynamics
-    graph_t g;
-    double t1, t2;
-    
-    cout<<"loading data... \n";
+    unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
 
-    t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    for (unsigned i=0;i<run_num;i++)
+    {
+        cout<<"\nRun #"<<i<<endl;
+        srand(SEED); // fix seed to avoid runtime dynamics
+        graph_t g;
+        double t1, t2;
+        
+        cout<<"loading data... \n";
 
-    if (g.load_csv_vertices(vfile, true, "|", 0) == -1)
-        return -1;
-    if (g.load_csv_edges(efile, true, "|", 0, 1) == -1) 
-        return -1;
+        t1 = timer::get_usec();
+        string vfile = arguments.dataset_path + "/vertex.csv";
+        string efile = arguments.dataset_path + "/edge.csv";
 
-    size_t vertex_num = g.num_vertices();
-    size_t edge_num = g.num_edges();
-    t2 = timer::get_usec();
+        if (g.load_csv_vertices(vfile, true, "|,", 0) == -1)
+            return -1;
+        if (g.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+            return -1;
 
-    cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
-    
+        size_t vertex_num = g.num_vertices();
+        size_t edge_num = g.num_edges();
+        t2 = timer::get_usec();
+
+        cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
+        
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n\n";
+        cout<<"== time: "<<t2-t1<<" sec\n\n";
 #endif
 
-    vector<uint64_t> IDs;
-    if (input(arguments.dataset_path, arguments.delete_num, IDs)
-            !=arguments.delete_num)
-    {
-        cout<<"Error in ID file\n";
-        return -1;
-    }
+        vector<uint64_t> IDs;
+        if (input(arguments.dataset_path, arguments.delete_num, IDs)
+                !=arguments.delete_num)
+        {
+            cout<<"Error in ID file\n";
+            return -1;
+        }
 
-    t1 = timer::get_usec();
-    perf.start();
+        t1 = timer::get_usec();
+        perf.start(i);
 
-    graph_update(g, IDs);
+        graph_update(g, IDs);
 
-
-    perf.stop();
-    t2 = timer::get_usec();
-    cout<<"graph update finish: \n";
-    cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
+        perf.stop(i);
+        t2 = timer::get_usec();
+        cout<<"graph update finish: \n";
+        cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
 
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
+        cout<<"== time: "<<t2-t1<<" sec\n";
+#endif
+    }
+#ifndef ENABLE_VERIFY
     perf.print();
 #endif
-
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
     output(g);

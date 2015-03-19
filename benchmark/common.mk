@@ -66,7 +66,7 @@ reset_generated_dir:
 run: ${TARGET} reset_generated_dir
 	@if [ -n "${TARGET}" ]; then \
           echo "Running ${TARGET}, output in ${OUTPUT_LOG}"; \
-          ./${TARGET} ${RUN_ARGS} > ${OUTPUT_LOG} 2>&1; \
+          ./${TARGET} ${RUN_ARGS} ${PERF_ARGS} > ${OUTPUT_LOG} 2>&1; \
 	fi
 
 clean:

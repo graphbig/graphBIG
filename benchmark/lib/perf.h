@@ -16,6 +16,8 @@
 
 #include "pfm_cxx.h"
 
+#define DEFAULT_PERF_GRP_SZ 4
+
 // PERF SYSTEM CALL REFERENCE:
 
 // if "type" is PERF_TYPE_HARDWARE, "config" is one of: 
@@ -306,7 +308,6 @@ public:
     {
         event_parser(arg);
     }
-
     void set_arg(std::string arg)
     {
         event_parser(arg);
@@ -320,28 +321,45 @@ public:
             _perf_vec[i].open(exclude_user,exclude_kernel,exclude_idle,exclude_hv);
         }
     }
-    void open(void)
+    void open(int group_id=-1, unsigned group_size=DEFAULT_PERF_GRP_SZ)
     {
-        for (size_t i=0;i<_perf_vec.size();i++)
+        size_t start = (group_id == -1)? 0 : group_id*group_size;
+        size_t end = (group_id == -1)? _perf_vec.size() : start+group_size;
+        if (start >= _perf_vec.size()) return;
+        if (end > _perf_vec.size()) end = _perf_vec.size();
+
+        for (size_t i=start;i<end;i++)
         {
             _perf_vec[i].open(exclude_user,exclude_kernel,exclude_idle,exclude_hv);
+
         }
     }
-    void start(void)
+
+    void start(int group_id=-1, unsigned group_size=DEFAULT_PERF_GRP_SZ)
     {
-        for (size_t i=0;i<_perf_vec.size();i++)
+        size_t start = (group_id == -1)? 0 : group_id*group_size;
+        size_t end = (group_id == -1)? _perf_vec.size() : start+group_size;
+        if (start >= _perf_vec.size()) return;
+        if (end > _perf_vec.size()) end = _perf_vec.size();
+
+        for (size_t i=start;i<end;i++)
         {
             _perf_vec[i].start();
         }
     }
 
-    void stop(void)
+    void stop(int group_id=-1, unsigned group_size=DEFAULT_PERF_GRP_SZ)
     {
-        for (size_t i=0;i<_perf_vec.size();i++)
+        size_t start = (group_id == -1)? 0 : group_id*group_size;
+        size_t end = (group_id == -1)? _perf_vec.size() : start+group_size;
+        if (start >= _perf_vec.size()) return;
+        if (end > _perf_vec.size()) end = _perf_vec.size();
+
+        for (size_t i=start;i<end;i++)
         {
             _perf_vec[i].stop();
         }
-        for (size_t i=0;i<_perf_vec.size();i++)
+        for (size_t i=start;i<end;i++)
         {
             _cnt_vec[i] = _perf_vec[i].get_perf_cnt();
             _multiplexing_vec[i] = _perf_vec[i].is_multiplexing();
@@ -377,6 +395,11 @@ public:
             return 0;
         }
         return _event_vec[id];
+    }
+    bool event_mux(size_t id)
+    {
+        if (id >= _cnt_vec.size()) return false;
+        return _multiplexing_vec[id];
     }
     size_t get_event_cnt(void)
     {
@@ -556,7 +579,7 @@ protected:
             type = PERF_TYPE_SOFTWARE;
             config = PERF_COUNT_SW_PAGE_FAULTS_MAJ;
         }
-        else if (ievent.substr(0,6)=="HW_CACHE_")
+        else if (ievent.substr(0,9)=="HW_CACHE_")
         {
             type = PERF_TYPE_HW_CACHE;
 
@@ -567,7 +590,7 @@ protected:
             std::string hw,op,stat;
             size_t head,tail;
 
-            head = 6;
+            head = 9;
             tail = ievent.find('_', head);
             hw = ievent.substr(head, tail-head);
 
@@ -629,6 +652,50 @@ protected:
     bool exclude_kernel;
     bool exclude_idle;
     bool exclude_hv;
+};
+
+class gBenchPerf_multi
+{
+public:
+    gBenchPerf_multi(unsigned threadnum, const gBenchPerf_event& rhs)
+    {
+        _perf_vec.resize(threadnum, rhs);
+    }
+
+    void open(unsigned tid, int group_id=-1, unsigned group_size=DEFAULT_PERF_GRP_SZ)
+    {
+        if (tid >= _perf_vec.size()) return; 
+        _perf_vec[tid].open(group_id, group_size);
+    }
+    void start(unsigned tid, int group_id=-1, unsigned group_size=DEFAULT_PERF_GRP_SZ)
+    {
+        if (tid >= _perf_vec.size()) return; 
+        _perf_vec[tid].start(group_id, group_size);
+    }
+    void stop(unsigned tid, int group_id=-1, unsigned group_size=DEFAULT_PERF_GRP_SZ)
+    {
+        if (tid >= _perf_vec.size()) return; 
+        _perf_vec[tid].stop(group_id, group_size);
+    }
+    void print(void)
+    {
+        for (size_t c=0;c<_perf_vec[0].get_event_cnt();c++) 
+        {
+            std::cout<<_perf_vec[0].event_name(c)<<"\t==>\t";
+            unsigned long long res=0;
+            bool mux=false;
+            for (size_t i=0;i<_perf_vec.size();i++) 
+            {
+                res += _perf_vec[i].event_counter(c);
+                mux |= _perf_vec[i].event_mux(c);
+            }
+            std::cout<<res;
+            if (mux) std::cout<<"\tMUX";
+            std::cout<<std::endl;
+        }
+    }
+protected:
+    std::vector<gBenchPerf_event> _perf_vec;
 };
 
 #endif

@@ -71,8 +71,11 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
 }
 
 //==============================================================//
-void dc(graph_t& g) 
+void dc(graph_t& g, gBenchPerf_event & perf, int perf_group) 
 {
+    perf.open(perf_group);
+    perf.start(perf_group);
+
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
@@ -87,14 +90,18 @@ void dc(graph_t& g)
             (targ->property().indegree)++;
         }
     }
+    perf.stop(perf_group);
 }// end dc
-void parallel_dc(graph_t& g, unsigned threadnum)
+void parallel_dc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
 {
     uint64_t chunk = (unsigned)ceil(g.num_vertices()/(double)threadnum);
     #pragma omp parallel num_threads(threadnum)
     {
         unsigned tid = omp_get_thread_num();
 
+        perf.open(tid, perf_group);
+        perf.start(tid, perf_group); 
+       
         unsigned start = tid*chunk;
         unsigned end = start + chunk;
         if (end > g.num_vertices()) end = g.num_vertices();
@@ -114,6 +121,7 @@ void parallel_dc(graph_t& g, unsigned threadnum)
             }
 
         }
+        perf.stop(tid, perf_group);
     }
 }
 void degree_analyze(graph_t& g, 
@@ -152,6 +160,15 @@ void output(graph_t& g)
             <<" out-"<<vit->property().outdegree<<"\n";
     }
 }
+void reset_graph(graph_t & g)
+{
+    vertex_iterator vit;
+    for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
+    {
+        vit->property().indegree = 0;
+        vit->property().outdegree = 0;
+    }
+}
 
 
 int main(int argc, char * argv[])
@@ -162,7 +179,7 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg,false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
@@ -173,9 +190,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
     size_t vertex_num = graph.num_vertices();
@@ -187,19 +204,28 @@ int main(int argc, char * argv[])
 #endif
 
     cout<<"\ncomputing DC for all vertices...\n";
-    // Degree Centrality
-    t1 = timer::get_usec();
-    perf.start();
-    uint64_t indegree_max, indegree_min, outdegree_max, outdegree_min;
 
-    if (arguments.threadnum==1)
-        dc(graph);
-    else
-        parallel_dc(graph, arguments.threadnum);
-
-    perf.stop();
-    t2 = timer::get_usec();
+    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
     
+    for (unsigned i=0;i<run_num;i++)
+    {
+        // Degree Centrality
+        t1 = timer::get_usec();
+        
+        if (arguments.threadnum==1)
+            dc(graph, perf, i);
+        else
+            parallel_dc(graph, arguments.threadnum, perf_multi, i);
+
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+        reset_graph(graph);
+    }
+
+    uint64_t indegree_max, indegree_min, outdegree_max, outdegree_min;
     degree_analyze(graph, indegree_max, indegree_min, outdegree_max, outdegree_min);
 
     cout<<"DC finish: \n";
@@ -207,8 +233,12 @@ int main(int argc, char * argv[])
         <<"]  outDegree[Max-"<<outdegree_max<<" Min-"<<outdegree_min
         <<"]"<<endl;
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
-    perf.print();
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
+    if (arguments.threadnum == 1)
+        perf.print();
+    else
+        perf_multi.print();
+
 #endif
 
 #ifdef ENABLE_OUTPUT

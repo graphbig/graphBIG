@@ -149,9 +149,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (g.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (g.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (g.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (g.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
     size_t vertex_num = g.num_vertices();

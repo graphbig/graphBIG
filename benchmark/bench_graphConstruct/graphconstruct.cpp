@@ -74,8 +74,11 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
 
 //==============================================================//
 
-void randomgraph_construction(graph_t &g, size_t vertex_num, size_t edge_num)
+void randomgraph_construction(graph_t &g, size_t vertex_num, size_t edge_num, gBenchPerf_event & perf, int perf_group)
 {
+    perf.open(perf_group);
+    perf.start(perf_group);
+
     for (size_t i=0;i<vertex_num;i++) 
     {
         vertex_iterator vit = g.add_vertex();
@@ -87,6 +90,7 @@ void randomgraph_construction(graph_t &g, size_t vertex_num, size_t edge_num)
         if (g.add_edge(rand()%vertex_num, rand()%vertex_num, eit))
             eit->set_property(edge_property(i));
     }
+    perf.stop(perf_group);
 }
 
 
@@ -112,28 +116,33 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg,false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
-    srand(SEED); // fix seed to avoid runtime dynamics
-    graph_t g;
     double t1, t2;
     
     cout<<"== "<<arguments.vertex_num<<" vertices  "<<arguments.edge_num<<" edges\n";
 
-    t1 = timer::get_usec();
-    perf.start();
+    unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
+    
+    for (unsigned i=0;i<run_num;i++)
+    {
+        srand(SEED); // fix seed to avoid runtime dynamics
 
-    randomgraph_construction(g, arguments.vertex_num, arguments.edge_num);
+        t1 = timer::get_usec();
+        graph_t g;
+        randomgraph_construction(g, arguments.vertex_num, arguments.edge_num, perf, i);
 
-    perf.stop();
-    t2 = timer::get_usec();
-    cout<<"\nconstruction finish: \n";
-    cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+    }
+    cout<<"\nconstruction finish \n";
 
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
     perf.print();
 #endif
 

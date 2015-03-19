@@ -83,7 +83,7 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
 
 //==============================================================//
 
-void bc(graph_t& g)
+void bc(graph_t& g, gBenchPerf_event & perf, int perf_group)
 {
     typedef list<size_t> vertex_list_t;
     // initialization
@@ -93,6 +93,11 @@ void bc(graph_t& g)
     vector<size_t> num_of_paths(vnum);
     vector<int8_t> depth_of_vertices(vnum); // 8 bits signed
     vector<double> centrality_update(vnum);
+
+
+    perf.open(perf_group);
+    perf.start(perf_group);
+
 
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
@@ -163,10 +168,12 @@ void bc(graph_t& g)
         }
     }
 
+    perf.stop(perf_group);
+
     return;
 }
 
-void parallel_bc(graph_t& g, unsigned threadnum)
+void parallel_bc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
 {
     typedef list<size_t> vertex_list_t;
     size_t vnum = g.num_vertices();
@@ -175,6 +182,9 @@ void parallel_bc(graph_t& g, unsigned threadnum)
     #pragma omp parallel num_threads(threadnum)
     {
         unsigned tid = omp_get_thread_num();
+
+        perf.open(tid, perf_group);
+        perf.start(tid, perf_group);  
 
         unsigned start = tid*chunk;
         unsigned end = start + chunk;
@@ -254,6 +264,9 @@ void parallel_bc(graph_t& g, unsigned threadnum)
                 }
             }
         }
+
+        perf.stop(tid, perf_group);
+
     }
     return;
 }
@@ -267,6 +280,16 @@ void output(graph_t& g)
         cout<<"== vertex "<<vit->id()<<": "<<vit->property().BC<<"\n";
     }
 }
+void reset_graph(graph_t & g)
+{
+    vertex_iterator vit;
+    for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
+    {
+        vit->property().BC = 0;
+    }
+
+}
+
 //==============================================================//
 
 int main(int argc, char * argv[])
@@ -278,7 +301,7 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg, false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
@@ -291,9 +314,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
     size_t vertex_num = graph.num_vertices();
@@ -313,21 +336,33 @@ int main(int argc, char * argv[])
 
     //processing
     cout<<"\ncomputing BC for all vertices...\n";
-    t1 = timer::get_usec();
-    perf.start();
+ 
+    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
+   
+    for (unsigned i=0;i<run_num;i++)
+    {
+        t1 = timer::get_usec();
 
-    if (arguments.threadnum==1)
-        bc(graph);
-    else
-        parallel_bc(graph, arguments.threadnum);
+        if (arguments.threadnum==1)
+            bc(graph,perf,i);
+        else
+            parallel_bc(graph, arguments.threadnum,perf_multi,i);
 
-    perf.stop();
-    t2 = timer::get_usec();
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+        reset_graph(graph);
+    }
     cout<<"== finish\n";
 
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
-    perf.print();
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
+    if (arguments.threadnum == 1)
+        perf.print();
+    else
+        perf_multi.print();
 #endif
 
     //print output

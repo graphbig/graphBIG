@@ -15,8 +15,11 @@ clean:
           ${MAKE} -C $$d clean; \
         done
 	${MAKE} -C tools clean
+	@rm -f output.log
 
 run: 
 	@for d in ${SUBDIR}; do \
 	  ${MAKE} -C $$d run; \
+	  cat $$d/output.log >> output.log; \
 	done
+

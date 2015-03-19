@@ -93,11 +93,14 @@ public:
 };
 
 
-void dfs(graph_t& g, size_t root, DFSVisitor& vis) 
+void dfs(graph_t& g, size_t root, DFSVisitor& vis, gBenchPerf_event & perf, int perf_group) 
 {
-    std::stack<vertex_iterator> vertex_stack;
-    size_t visit_cnt=0;
+    perf.open(perf_group);
+    perf.start(perf_group);
 
+    std::stack<vertex_iterator> vertex_stack;
+    size_t visit_cnt=0;    
+    
     vertex_iterator iter = g.find_vertex(root);
     if (iter == g.vertices_end()) 
         return;
@@ -139,6 +142,7 @@ void dfs(graph_t& g, size_t root, DFSVisitor& vis)
         u->property().color = COLOR_BLACK;         
 
     }  // end while
+    perf.stop(perf_group);
 }  // end dfs
 
 //==============================================================//
@@ -152,6 +156,17 @@ void output(graph_t& g)
     }
 }
 
+void reset_graph(graph_t & g)
+{
+    vertex_iterator vit;
+    for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
+    {
+        vit->property().color = COLOR_WHITE;
+        vit->property().order = 0;
+    }
+
+}
+
 //==============================================================//
 int main(int argc, char * argv[])
 {
@@ -161,7 +176,7 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg,false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
@@ -172,9 +187,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
     
     size_t vertex_num = graph.num_vertices();
@@ -190,17 +205,25 @@ int main(int argc, char * argv[])
     DFSVisitor vis;
 
     cout<<"DFS root: "<<arguments.root_vid<<"\n\n";
-    t1 = timer::get_usec();
-    perf.start();
 
-    dfs(graph, arguments.root_vid, vis);
+    unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
+    
+    for (unsigned i=0;i<run_num;i++)
+    {
+        t1 = timer::get_usec();
 
-    perf.stop();
-    t2 = timer::get_usec();
+        dfs(graph, arguments.root_vid, vis, perf, i);
+
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+        reset_graph(graph);
+    }
     cout<<"DFS finish: \n";
     cout<<"== w-"<<vis.white_access<<" g-"<<vis.grey_access<<" b-"<<vis.black_access<<endl;
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
     perf.print();
 #endif
 

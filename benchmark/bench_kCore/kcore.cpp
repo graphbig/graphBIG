@@ -82,7 +82,7 @@ inline unsigned vertex_distributor(uint64_t vid, unsigned threadnum)
 {
     return vid%threadnum;
 }
-size_t kcore(graph_t& g, size_t k) 
+size_t kcore(graph_t& g, size_t k, gBenchPerf_event & perf, int perf_group) 
 {
     size_t remove_cnt=0;
 
@@ -101,6 +101,9 @@ size_t kcore(graph_t& g, size_t k)
             remove_cnt++;
         }
     }
+    
+    perf.open(perf_group);
+    perf.start(perf_group);
 
     // remove vertices iteratively 
     while (!process_q.empty()) 
@@ -127,9 +130,10 @@ size_t kcore(graph_t& g, size_t k)
 
     }
 
+    perf.stop(perf_group);
     return remove_cnt;
 }  // end kcore
-size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum)
+size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
 {
     // initialize
     size_t remove_cnt=0;
@@ -155,6 +159,8 @@ size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum)
         unsigned tid = omp_get_thread_num();
         vector<uint64_t> & input_tasks = global_input_tasks[tid];
         
+        perf.open(tid, perf_group);
+        perf.start(tid, perf_group);  
         while(!stop)
         {
             #pragma omp barrier
@@ -200,6 +206,7 @@ size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum)
             #pragma omp barrier
 
         }
+        perf.stop(tid, perf_group);
     }
 
     return remove_cnt;
@@ -219,6 +226,16 @@ void output(graph_t& g)
             cout<<"false\n";
     }
 }
+void reset_graph(graph_t & g)
+{
+    vertex_iterator vit;
+    for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
+    {
+        vit->property().degree = 0;
+        vit->property().removed = false;
+    }
+
+}
 
 //==============================================================//
 int main(int argc, char * argv[])
@@ -229,7 +246,7 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg,false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
@@ -240,9 +257,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
 
@@ -258,19 +275,32 @@ int main(int argc, char * argv[])
 
     cout<<"computing kCore: k="<<arguments.k<<"\n";
     size_t remove_cnt;
-    t1 = timer::get_usec();
-    perf.start();
 
-    if (arguments.threadnum==1)
-        remove_cnt=kcore(graph, arguments.k);
-    else
-        remove_cnt=parallel_kcore(graph, arguments.k, arguments.threadnum);
-    perf.stop();
-    t2 = timer::get_usec();
+    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
+    
+    for (unsigned i=0;i<run_num;i++)
+    {
+        t1 = timer::get_usec();
+
+        if (arguments.threadnum==1)
+            remove_cnt=kcore(graph, arguments.k, perf, i);
+        else
+            remove_cnt=parallel_kcore(graph, arguments.k, arguments.threadnum, perf_multi, i);
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+        reset_graph(graph);
+    }
     cout<<"== removed vertices: "<<remove_cnt<<endl;
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
-    perf.print();
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
+    if (arguments.threadnum == 1)
+        perf.print();
+    else
+        perf_multi.print();
+
 #endif
 
 #ifdef ENABLE_OUTPUT

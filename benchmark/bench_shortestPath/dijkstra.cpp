@@ -20,9 +20,7 @@ using namespace std;
 class vertex_property
 {
 public:
-    vertex_property():root(0),distance(MY_INFINITY),predecessor(MY_INFINITY){}
-
-    uint64_t root;
+    vertex_property():distance(MY_INFINITY),predecessor(MY_INFINITY){}
 
     uint64_t distance;
     uint64_t predecessor;
@@ -96,20 +94,15 @@ public:
 };
 
 
-void dijkstra(graph_t& g, size_t src)
+void dijkstra(graph_t& g, size_t src, gBenchPerf_event & perf, int perf_group)
 {
     priority_queue<data_pair, vector<data_pair>, comp> PQ;
     
-    // initialize
-    for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
-    {
-        vit->property().root = src;
-        vit->property().distance = MY_INFINITY;
-        vit->property().predecessor = MY_INFINITY;
-    }
+    perf.open(perf_group);
+    perf.start(perf_group);
 
+    // initialize
     vertex_iterator src_vit = g.find_vertex(src);
-    src_vit->property().root = src;
     src_vit->property().distance = 0;
     PQ.push(data_pair(src,0));
 
@@ -136,6 +129,7 @@ void dijkstra(graph_t& g, size_t src)
         }
     }
 
+    perf.stop(perf_group);
     return;
 }
 
@@ -143,10 +137,9 @@ inline unsigned vertex_distributor(uint64_t vid, unsigned threadnum)
 {
     return vid%threadnum;
 }
-void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum)
+void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
 {
     vertex_iterator rootvit=g.find_vertex(root);
-    rootvit->property().root = root;
     rootvit->property().distance = 0;
     
     vector<uint32_t> update(g.num_vertices(), MY_INFINITY);
@@ -166,7 +159,9 @@ void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum)
     {
         unsigned tid = omp_get_thread_num();
         vector<uint64_t> & input_tasks = global_input_tasks[tid];
-        
+     
+        perf.open(tid, perf_group);
+        perf.start(tid, perf_group);  
         while(!stop)
         {
             #pragma omp barrier
@@ -223,6 +218,7 @@ void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum)
             }
             #pragma omp barrier
         }
+        perf.stop(tid, perf_group);
     }
 
 
@@ -241,15 +237,20 @@ void output(graph_t& g)
             cout<<"INF";
         else
             cout<<vit->property().distance;
-        //cout<<" predecessor-";
-        //if (vit->property().predecessor == MY_INFINITY)
-        //    cout<<"UNDEFINED";
-        //else
-        //    cout<<vit->property().predecessor;
-
         cout<<"\n";
     }
     return;
+}
+
+void reset_graph(graph_t & g)
+{
+    vertex_iterator vit;
+    for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
+    {
+        vit->property().predecessor = MY_INFINITY;
+        vit->property().distance = MY_INFINITY;
+    }
+
 }
 //==============================================================//
 int main(int argc, char * argv[])
@@ -260,7 +261,7 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg, false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
@@ -272,9 +273,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
     size_t vertex_num = graph.num_vertices();
@@ -298,20 +299,30 @@ int main(int argc, char * argv[])
  
     cout<<"Shortest Path: source-"<<root;
     cout<<"...\n";
-    t1 = timer::get_usec();
-    perf.start();
 
-    if (arguments.threadnum==1)
-        dijkstra(graph, root);
-    else
-        parallel_dijkstra(graph, root, arguments.threadnum);
+    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
     
-    perf.stop();
-    t2 = timer::get_usec();
+    for (unsigned i=0;i<run_num;i++)
+    {
+        t1 = timer::get_usec();
 
+        if (arguments.threadnum==1)
+            dijkstra(graph, root, perf, i);
+        else
+            parallel_dijkstra(graph, root, arguments.threadnum, perf_multi, i);
+        
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+    }
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
-    perf.print();
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
+    if (arguments.threadnum == 1)
+        perf.print();
+    else
+        perf_multi.print();
 #endif
 
 

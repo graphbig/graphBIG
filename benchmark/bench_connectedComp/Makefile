@@ -1,7 +1,10 @@
 ROOT=../..
 TARGET=connectedcomponent
 OBJS=connectedcomponent.o 
-RUN_ARGS=--threadnum 1 --dataset $(ROOT)/dataset/small
+
+RUN_ARGS=--threadnum 4 --dataset $(ROOT)/dataset/small  
+PERF_ARGS=--perf-event PERF_COUNT_HW_CPU_CYCLES PERF_COUNT_HW_INSTRUCTIONS PERF_COUNT_HW_BRANCH_INSTRUCTIONS PERF_COUNT_HW_BRANCH_MISSES PERF_COUNT_HW_CACHE_L1D_READ_ACCESS PERF_COUNT_HW_CACHE_L1D_READ_MISS 
+
 EXTRA_CXX_FLAGS+=-fopenmp
 
 include ../common.mk

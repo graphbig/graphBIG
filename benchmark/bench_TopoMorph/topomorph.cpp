@@ -142,10 +142,10 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (dag.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (dag.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
     // turn on dag_check for edge loading
-    if (dag.load_csv_edges(efile, true, "|", 0, 1, true) == -1) 
+    if (dag.load_csv_edges(efile, true, "|,", 0, 1, true) == -1) 
         return -1;
 
 
@@ -158,27 +158,38 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
-    graph_t ug(openG::UNDIRECTED);
+    graph_t * ug=NULL;
+    
+     unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
+    
+    for (unsigned i=0;i<run_num;i++)
+    {
+        if (ug) delete ug;
+        ug = new graph_t(openG::UNDIRECTED);
 
-    t1 = timer::get_usec();
-    perf.start();
+        t1 = timer::get_usec();
+        perf.start(i);
 
-    moralize(dag, ug);
+        moralize(dag, *ug);
 
-    perf.stop();
-    t2 = timer::get_usec();
+        perf.stop(i);
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+    }
     cout<<"\nMoralization finish: \n";
 
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
     perf.print();
 #endif
 
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
-    output(ug, arguments.dataset_path);
+    output(*ug, arguments.dataset_path);
 #endif
-
+    if (ug) delete ug;
     cout<<"==================================================================\n";
     return 0;
 }  // end main

@@ -107,7 +107,7 @@ inline unsigned vertex_distributor(uint64_t vid, unsigned threadnum)
 {
     return vid%threadnum;
 }
-void parallel_bfs(graph_t& g, size_t root, unsigned threadnum)
+void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
 {
     // initializzation
     vertex_iterator rootvit=g.find_vertex(root);
@@ -121,11 +121,13 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum)
     vector<vector<uint64_t> > global_output_tasks(threadnum*threadnum);
 
     bool stop = false;
-    #pragma omp parallel num_threads(threadnum) shared(stop,global_input_tasks,global_output_tasks) 
+    #pragma omp parallel num_threads(threadnum) shared(stop,global_input_tasks,global_output_tasks,perf) 
     {
         unsigned tid = omp_get_thread_num();
         vector<uint64_t> & input_tasks = global_input_tasks[tid];
-        
+      
+        perf.open(tid, perf_group);
+        perf.start(tid, perf_group);  
         while(!stop)
         {
             #pragma omp barrier
@@ -166,12 +168,16 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum)
             #pragma omp barrier
 
         }
+        perf.stop(tid, perf_group);
     }
 
 }
 
-void bfs(graph_t& g, size_t root, BFSVisitor& vis) 
+void bfs(graph_t& g, size_t root, BFSVisitor& vis, gBenchPerf_event & perf, int perf_group) 
 {
+    perf.open(perf_group);
+    perf.start(perf_group);
+
     std::queue<vertex_iterator> vertex_queue;
 
     vertex_iterator iter = g.find_vertex(root);
@@ -224,6 +230,9 @@ void bfs(graph_t& g, size_t root, BFSVisitor& vis)
         u->property().color = COLOR_BLACK;         
 
     }  // end while
+
+    perf.stop(perf_group);
+
 }  // end bfs
 //==============================================================//
 
@@ -237,6 +246,18 @@ void output(graph_t& g)
     }
 }
 
+void reset_graph(graph_t & g)
+{
+    vertex_iterator vit;
+    for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
+    {
+        vit->property().color = COLOR_WHITE;
+        vit->property().order = 0;
+        vit->property().level = MY_INFINITY;
+    }
+
+}
+
 //==============================================================//
 int main(int argc, char * argv[])
 {
@@ -247,7 +268,7 @@ int main(int argc, char * argv[])
     arg_t arguments;
     vector<string> inputarg;
     argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
+    gBenchPerf_event perf(inputarg, false);
     arg_init(arguments);
     arg_parser(arguments,inputarg);
 
@@ -259,9 +280,9 @@ int main(int argc, char * argv[])
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
     size_t vertex_num = graph.vertex_num();
@@ -277,24 +298,33 @@ int main(int argc, char * argv[])
     BFSVisitor vis;
 
     cout<<"\nBFS root: "<<root<<"\n";
+    
+    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
+    if (run_num==0) run_num = 1;
+    double elapse_time = 0;
+    
+    for (unsigned i=0;i<run_num;i++)
+    {
+        t1 = timer::get_usec();
 
-    t1 = timer::get_usec();
-    perf.start();
+        if (arguments.threadnum==1)
+            bfs(graph, root, vis, perf, i);
+        else
+            parallel_bfs(graph, root, arguments.threadnum, perf_multi, i);
 
-    if (arguments.threadnum==1)
-        bfs(graph, root, vis);
-    else
-        parallel_bfs(graph, root, arguments.threadnum);
-
-    perf.stop();
-    t2 = timer::get_usec();
-
+        t2 = timer::get_usec();
+        elapse_time += t2-t1;
+        reset_graph(graph);
+    }
     cout<<"BFS finish: \n";
-    cout<<"== w-"<<vis.white_access<<" g-"<<vis.grey_access<<" b-"<<vis.black_access<<endl;
 
 #ifndef ENABLE_VERIFY
-    cout<<"== time: "<<t2-t1<<" sec\n";
-    perf.print();
+    cout<<"== time: "<<elapse_time/run_num<<" sec\n";
+    if (arguments.threadnum == 1)
+        perf.print();
+    else
+        perf_multi.print();
 #endif
 
 #ifdef ENABLE_OUTPUT
