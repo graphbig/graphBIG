@@ -34,7 +34,7 @@ $ cat output.log
 [Workloads]
 
 CPU side:
-11 benchmarks & 4 micro-benchmarks
+12 benchmarks & 4 micro-benchmarks
 
 GPU side:
 8 GPU workloads
