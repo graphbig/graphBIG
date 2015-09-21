@@ -87,6 +87,9 @@ The detailed dataset list and download links can be found at our [wiki page](htt
 - Hyesoon Kim, _Georgia Tech_  
 - Ching-Yung Lin, _IBM Thomas J. Watson Research Center_
 
+### Publication
+Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [GraphBIG: Understanding Graph Computing in the Context of Industrial Solutions](http://nailifeng.org/pubs/sc-graphbig.pdf), In _the proccedings of the International Conference for High Performance Computing, Networking, Storage and Analysis(SC), Nov. 2015_
+
 ### Development
 
 Want to contribute? Great!
