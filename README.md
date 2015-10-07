@@ -47,7 +47,7 @@ GraphBIG contains the following main features
 Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [GraphBIG: Understanding Graph Computing in the Context of Industrial Solutions](http://nailifeng.org/pubs/sc-graphbig.pdf), To appear in _the proccedings of the International Conference for High Performance Computing, Networking, Storage and Analysis(SC), Nov. 2015_
 
 ### Tutorial
-_IEEE BigData 2015_ [The World is Big and Linked: Whole Spectrum Industry Solutions towards Big Graphs](http://cci.drexel.edu/bigdata/bigdata2015/tutorials.html)
+[The World is Big and Linked: Whole Spectrum Industry Solutions towards Big Graphs](http://cci.drexel.edu/bigdata/bigdata2015/tutorials.html), _IEEE BigData 2015, Oct. 2015_
 
 ### Upcoming
 __GraphBIG-GPU__ now has been released!
