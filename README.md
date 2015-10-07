@@ -8,7 +8,7 @@
 </pre>
 
 # GraphBIG
-GraphBIG is a graph benchmarking effort initiated by IBM __System G__ and Georgia Tech __HPArch__. By supporting a wide selection of workloads from both __CPU__ and __GPU__ sides,
+GraphBIG is a graph benchmarking effort initiated by Georgia Tech __HPArch__ and IBM __System G__. By supporting a wide selection of workloads from both __CPU__ and __GPU__ sides,
 GraphBIG covers the broad spectrum of graph computing and fulfills multiple major requirements, including __framework__, __representativeness__, __coverage__, and graph __data support__.
 
 | | | |
@@ -24,19 +24,13 @@ real-world use cases of IBM System G customers. GraphBIG covers a broad scope of
 much more than simple graph traversals.
 To ensure the representativeness and coverage of the workloads, we analyzed real-world
 use cases and summarized graph computing features by computation types and graph data sources.
-GraphBIG workloads cover all computation types. Meanwhile, GraphBIG also provides real-world data
-sets covering major graph data sources and a synthetic data set
-for characterization purposes.
+GraphBIG workloads then cover all major computation types and data sources. 
 
-GraphBIG benchmarks were initially built on the
-IBM System G framework to represent real-world graph computing practices.
-For the open-source purpose, a community branch was established
-by designing a new graph middleware, the openG framework.
-Both community and commercial branch are sharing the same workloads and dataset support. Their underlying frameworks
-also follow the same methodology and show the similar architectural behaviors.
+GraphBIG benchmarks were built on an open source graph framework
+named "openG", which follows the same design methodology as IBM System G framework.
+It represents architectural/system behaviors of real-world graph computing practices.
 
-The community branch is released here.
-For packages of the commercial branch, please contact [IBM System G].
+(For commercial packages of the IBM System G, please visit [IBM System G])
 
 ### Features
 GraphBIG contains the following main features
@@ -49,7 +43,16 @@ GraphBIG contains the following main features
 - Standalone package: _can be compiled without external libraries_
 - Profiling tools: _provides tools to profile the code section of interest with hardware performance counters ([libpfm] code is integrated)_
 
+### Publication
+Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [GraphBIG: Understanding Graph Computing in the Context of Industrial Solutions](http://nailifeng.org/pubs/sc-graphbig.pdf), To appear in _the proccedings of the International Conference for High Performance Computing, Networking, Storage and Analysis(SC), Nov. 2015_
 
+### Tutorial
+_IEEE BigData 2015_ [The World is Big and Linked: Whole Spectrum Industry Solutions towards Big Graphs](http://cci.drexel.edu/bigdata/bigdata2015/tutorials.html)
+
+### Upcoming
+__GraphBIG-GPU__ now has been released!
+
+We're currently working on the release of version 3.0 beta, which will include a redesigned interaction interface, multiple issue fixes, and a set of new benchmarks for architectural simulation purposes. 
 
 ### Compile/Run
 
@@ -87,9 +90,6 @@ The detailed dataset list and download links can be found at our [wiki page](htt
 - Hyesoon Kim, _Georgia Tech_  
 - Ching-Yung Lin, _IBM Thomas J. Watson Research Center_
 
-### Publication
-Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [GraphBIG: Understanding Graph Computing in the Context of Industrial Solutions](http://nailifeng.org/pubs/sc-graphbig.pdf), In _the proccedings of the International Conference for High Performance Computing, Networking, Storage and Analysis(SC), Nov. 2015_
-
 ### Development
 
 Want to contribute? Great!
@@ -103,11 +103,6 @@ BSD license
 
 ### Version
 2.0
-
-### Upcoming
-__GraphBIG-GPU__ now has been released!
-
-The profiling tools of GPU side will be released soon.
 
 ### Contact us
 Lifeng Nai (lnai3 _at_ gatech.edu)
