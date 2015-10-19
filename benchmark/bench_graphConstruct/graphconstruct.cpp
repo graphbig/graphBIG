@@ -3,9 +3,9 @@
 //
 // Usage: ./randomgraph --vertex <vertex #> --edge <edge #>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
-#include "../lib/perf.h"
+#include "common.h"
+#include "def.h"
+#include "perf.h"
 #include "openG.h"
 
 using namespace std;
@@ -34,44 +34,11 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    size_t vertex_num;
-    size_t edge_num;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.vertex_num = 100;
-    arguments.edge_num = 1000;
+    arg.add_arg("vertex","100","vertex #");
+    arg.add_arg("edge","1000","edge #");
 }
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--vertex") 
-        {
-            i++;
-            arguments.vertex_num=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--edge") 
-        {
-            i++;
-            arguments.edge_num=atol(inputarg[i].c_str());
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            i++;
-            //return;
-        }
-    }
-    return;
-}
-
 //==============================================================//
 
 void randomgraph_construction(graph_t &g, size_t vertex_num, size_t edge_num, gBenchPerf_event & perf, int perf_group)
@@ -112,17 +79,23 @@ int main(int argc, char * argv[])
 {
     graphBIG::print();
     cout<<"Benchmark: graph construction\n";
-
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg,false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    
+    size_t vertex_num,edge_num;
+    arg.get_value("vertex",vertex_num);
+    arg.get_value("edge",edge_num);
 
     double t1, t2;
     
-    cout<<"== "<<arguments.vertex_num<<" vertices  "<<arguments.edge_num<<" edges\n";
+    cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
 
     unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
@@ -134,7 +107,7 @@ int main(int argc, char * argv[])
 
         t1 = timer::get_usec();
         graph_t g;
-        randomgraph_construction(g, arguments.vertex_num, arguments.edge_num, perf, i);
+        randomgraph_construction(g, vertex_num, edge_num, perf, i);
 
         t2 = timer::get_usec();
         elapse_time += t2-t1;

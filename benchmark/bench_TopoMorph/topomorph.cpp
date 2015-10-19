@@ -3,11 +3,13 @@
 //
 // Usage: ./moralization --dataset <dataset path>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
-#include "../lib/perf.h"
+#include "common.h"
+#include "def.h"
+#include "perf.h"
 #include "openG.h"
-
+#ifdef SIM
+#include "SIM.h"
+#endif
 using namespace std;
 
 class vertex_property
@@ -34,35 +36,6 @@ typedef graph_t::edge_iterator      edge_iterator;
 
 
 //==============================================================//
-
-struct arg_t
-{
-    string dataset_path;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1; i<inputarg.size(); i++)
-    {
-
-        if (inputarg[i]=="--dataset")
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
 
 //==============================================================//
 
@@ -127,25 +100,29 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: Moralization\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
 
     graph_t dag(openG::DIRECTED);
     double t1, t2;
 
     cout<<"loading data... \n";
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (dag.load_csv_vertices(vfile, true, "|,", 0) == -1)
+    if (dag.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
     // turn on dag_check for edge loading
-    if (dag.load_csv_edges(efile, true, "|,", 0, 1, true) == -1) 
+    if (dag.load_csv_edges(efile, true, separator, 0, 1, true) == -1) 
         return -1;
 
 
@@ -170,10 +147,15 @@ int main(int argc, char * argv[])
         ug = new graph_t(openG::UNDIRECTED);
 
         t1 = timer::get_usec();
+        perf.open(i);
         perf.start(i);
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
         moralize(dag, *ug);
-
+#ifdef SIM
+    SIM_END(true);
+#endif
         perf.stop(i);
         t2 = timer::get_usec();
         elapse_time += t2-t1;

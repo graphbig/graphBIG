@@ -1,12 +1,17 @@
 //====== Graph Benchmark Suites ======//
 //======== Degree Centrality =========//
 
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 #include <math.h>
 #include <stack>
 #include "omp.h"
+#ifdef SIM
+#include "SIM.h"
+#endif
+
+
 
 using namespace std;
 
@@ -34,48 +39,14 @@ typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
 
-struct arg_t
-{
-    string dataset_path;
-    unsigned threadnum;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-    arguments.threadnum = 1;
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else if (inputarg[i]=="--threadnum")
-        {
-            i++;
-            arguments.threadnum=atol(inputarg[i].c_str());
-        } 
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
-
 //==============================================================//
 void dc(graph_t& g, gBenchPerf_event & perf, int perf_group) 
 {
     perf.open(perf_group);
     perf.start(perf_group);
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
@@ -90,6 +61,9 @@ void dc(graph_t& g, gBenchPerf_event & perf, int perf_group)
             (targ->property().indegree)++;
         }
     }
+#ifdef SIM
+    SIM_END(true);
+#endif
     perf.stop(perf_group);
 }// end dc
 void parallel_dc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
@@ -176,25 +150,37 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: Degree Centrality\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg,false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
+
+    size_t threadnum;
+    arg.get_value("threadnum",threadnum);
 
     double t1, t2;
     graph_t graph;
     cout<<"loading data... \n";
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
+#ifndef EDGES_ONLY
+    if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
-
+#else
+    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+        return -1;
+#endif
+   
     size_t vertex_num = graph.num_vertices();
     size_t edge_num = graph.num_edges();
     t2 = timer::get_usec();
@@ -205,7 +191,7 @@ int main(int argc, char * argv[])
 
     cout<<"\ncomputing DC for all vertices...\n";
 
-    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    gBenchPerf_multi perf_multi(threadnum, perf);
     unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
     double elapse_time = 0;
@@ -215,14 +201,14 @@ int main(int argc, char * argv[])
         // Degree Centrality
         t1 = timer::get_usec();
         
-        if (arguments.threadnum==1)
+        if (threadnum==1)
             dc(graph, perf, i);
         else
-            parallel_dc(graph, arguments.threadnum, perf_multi, i);
+            parallel_dc(graph, threadnum, perf_multi, i);
 
         t2 = timer::get_usec();
         elapse_time += t2-t1;
-        reset_graph(graph);
+        if ((i+1)<run_num) reset_graph(graph);
     }
 
     uint64_t indegree_max, indegree_min, outdegree_max, outdegree_min;
@@ -234,7 +220,7 @@ int main(int argc, char * argv[])
         <<"]"<<endl;
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<elapse_time/run_num<<" sec\n";
-    if (arguments.threadnum == 1)
+    if (threadnum == 1)
         perf.print();
     else
         perf_multi.print();

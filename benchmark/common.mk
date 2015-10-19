@@ -1,11 +1,18 @@
 CXX_FLAGS+=-std=c++0x -Wall -Wno-deprecated
-INCLUDE+=-I${ROOT}/benchmark/tools/include -I${ROOT}/openG
-EXTRA_CXX_FLAGS+=-L${ROOT}/benchmark/tools/lib
-EXTRA_LIBS+=-lpfm_cxx -lpfm
+INCLUDE+=-I${ROOT}/common -I${ROOT}/openG
+EXTRA_CXX_FLAGS+=-L${ROOT}/tools/lib
 
 OUTPUT_LOG=output.log
 
 LIBS=$(EXTRA_LIBS)
+
+
+ifeq (${PFM},0)
+  CXX_FLAGS += -DNO_PFM
+else
+  EXTRA_LIBS += -lpfm_cxx -lpfm
+  INCLUDE += -I${ROOT}/tools/include
+endif
 
 ifeq (${DEBUG},1)
   CXX_FLAGS += -DDEBUG -g
@@ -13,8 +20,22 @@ else
   CXX_FLAGS +=-O3
 endif
 
+ifeq (${HMC},1)
+  OBJS += HMC.o SIM.o
+  CXX_FLAGS += -DHMC -DSIM
+endif
+
+ifeq (${SIM},1)
+  OBJS += SIM.o
+  CXX_FLAGS += -DSIM
+endif
+
 ifeq (${VERIFY},1)
   CXX_FLAGS += -DENABLE_VERIFY
+endif
+
+ifeq (${EDGES}, 1)
+  CXX_FLAGS += -DEDGES_ONLY
 endif
 
 ifeq (${STRUCTURE}, LL)
@@ -35,7 +56,7 @@ endif
 
 EXTRA_CXX_FLAGS+=${TRAITS}
 
-ifeq (${OUTPUT}, on)
+ifeq (${OUTPUT},1)
   EXTRA_CXX_FLAGS+=-DENABLE_OUTPUT
 endif
 
@@ -56,6 +77,12 @@ ${TARGET}: ${OBJS}
 
 ${UNIT_TEST_TARGETS}:
 	${CXX} ${CXX_FLAGS} ${LIBS} -o $@ $@.cc $(LIBS)
+
+HMC.o:
+	${CXX} -c ${ROOT}/common/HMC.cpp
+
+SIM.o:
+	${CXX} -c ${ROOT}/common/SIM.cpp
 
 reset_generated_dir:
 	@if [ -n "${GENERATED_DIRS}" ]; then \

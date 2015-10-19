@@ -3,12 +3,17 @@
 //
 // Usage: ./bfs.exe --dataset <dataset path> --root <root vertex id>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
-#include "../lib/perf.h"
+#include "common.h"
+#include "def.h"
+#include "perf.h"
+
 #include "openG.h"
 #include <queue>
 #include "omp.h"
+
+#ifdef SIM
+#include "SIM.h"
+#endif
 
 using namespace std;
 
@@ -38,50 +43,10 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    string dataset_path;
-    size_t root_vid;
-    unsigned threadnum;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.root_vid = 0;
-    arguments.dataset_path.clear();
-    arguments.threadnum = 1;
+    arg.add_arg("root","0","root/starting vertex");
 }
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--root") 
-        {
-            i++;
-            arguments.root_vid=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--threadnum")
-        {
-            i++;
-            arguments.threadnum=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
-
 //==============================================================//
 
 class BFSVisitor
@@ -193,7 +158,9 @@ void bfs(graph_t& g, size_t root, BFSVisitor& vis, gBenchPerf_event & perf, int 
 
     vertex_queue.push(iter);
     visit_cnt++;
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
     while (!vertex_queue.empty()) 
     {
         vertex_iterator u = vertex_queue.front(); 
@@ -230,7 +197,9 @@ void bfs(graph_t& g, size_t root, BFSVisitor& vis, gBenchPerf_event & perf, int 
         u->property().color = COLOR_BLACK;         
 
     }  // end while
-
+#ifdef SIM
+    SIM_END(true);
+#endif
     perf.stop(perf_group);
 
 }  // end bfs
@@ -261,29 +230,42 @@ void reset_graph(graph_t & g)
 //==============================================================//
 int main(int argc, char * argv[])
 {
-    //cout<<"===============Graph uBenchmark Suites===============\n";
     graphBIG::print();
     cout<<"Benchmark: BFS\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg, false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
 
+    size_t root,threadnum;
+    arg.get_value("root",root);
+    arg.get_value("threadnum",threadnum);
+    
     graph_t graph;
     double t1, t2;
 
     cout<<"loading data... \n";    
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
+#ifndef EDGES_ONLY
+    if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+        return -1;
+#endif
 
     size_t vertex_num = graph.vertex_num();
     size_t edge_num = graph.edge_num();
@@ -294,12 +276,11 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
-    size_t root=arguments.root_vid; 
     BFSVisitor vis;
 
     cout<<"\nBFS root: "<<root<<"\n";
     
-    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    gBenchPerf_multi perf_multi(threadnum, perf);
     unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
     double elapse_time = 0;
@@ -308,20 +289,20 @@ int main(int argc, char * argv[])
     {
         t1 = timer::get_usec();
 
-        if (arguments.threadnum==1)
+        if (threadnum==1)
             bfs(graph, root, vis, perf, i);
         else
-            parallel_bfs(graph, root, arguments.threadnum, perf_multi, i);
+            parallel_bfs(graph, root, threadnum, perf_multi, i);
 
         t2 = timer::get_usec();
         elapse_time += t2-t1;
-        reset_graph(graph);
+        if ((i+1)<run_num) reset_graph(graph);
     }
     cout<<"BFS finish: \n";
 
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<elapse_time/run_num<<" sec\n";
-    if (arguments.threadnum == 1)
+    if (threadnum == 1)
         perf.print();
     else
         perf_multi.print();

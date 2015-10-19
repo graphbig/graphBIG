@@ -3,10 +3,13 @@
 //
 // Usage: ./dfs.exe --dataset <dataset path> --root <root vertex id>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 #include <stack>
+#ifdef SIM
+#include "SIM.h"
+#endif
 
 using namespace std;
 
@@ -34,40 +37,9 @@ typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
 
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    string dataset_path;
-    size_t root_vid;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.root_vid = 0;
-    arguments.dataset_path.clear();
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--root") 
-        {
-            i++;
-            arguments.root_vid=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
+    arg.add_arg("root","0","root/starting vertex");
 }
 
 //==============================================================//
@@ -97,7 +69,9 @@ void dfs(graph_t& g, size_t root, DFSVisitor& vis, gBenchPerf_event & perf, int 
 {
     perf.open(perf_group);
     perf.start(perf_group);
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
     std::stack<vertex_iterator> vertex_stack;
     size_t visit_cnt=0;    
     
@@ -142,6 +116,9 @@ void dfs(graph_t& g, size_t root, DFSVisitor& vis, gBenchPerf_event & perf, int 
         u->property().color = COLOR_BLACK;         
 
     }  // end while
+#ifdef SIM
+    SIM_END(true);
+#endif
     perf.stop(perf_group);
 }  // end dfs
 
@@ -172,24 +149,34 @@ int main(int argc, char * argv[])
 {
     graphBIG::print();
     cout<<"Benchmark: DFS\n";
+
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
+
+    size_t root;
+    arg.get_value("root",root);
+
     double t1, t2;
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg,false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
 
     graph_t graph;
     cout<<"loading data... \n";
 
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
+    if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
     
     size_t vertex_num = graph.num_vertices();
@@ -204,7 +191,7 @@ int main(int argc, char * argv[])
 
     DFSVisitor vis;
 
-    cout<<"DFS root: "<<arguments.root_vid<<"\n\n";
+    cout<<"DFS root: "<<root<<"\n\n";
 
     unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
@@ -214,11 +201,11 @@ int main(int argc, char * argv[])
     {
         t1 = timer::get_usec();
 
-        dfs(graph, arguments.root_vid, vis, perf, i);
+        dfs(graph, root, vis, perf, i);
 
         t2 = timer::get_usec();
         elapse_time += t2-t1;
-        reset_graph(graph);
+        if ((i+1)<run_num) reset_graph(graph);
     }
     cout<<"DFS finish: \n";
     cout<<"== w-"<<vis.white_access<<" g-"<<vis.grey_access<<" b-"<<vis.black_access<<endl;

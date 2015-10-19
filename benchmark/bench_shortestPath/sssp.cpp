@@ -3,12 +3,12 @@
 // 
 // Single-source shortest path
 // 
-// Usage: ./dijstra.exe --dataset <dataset path> 
-//                      --root <root vertex id> 
-//                      --target <target vertex id>
+// Usage: ./sssp    --dataset <dataset path> 
+//                  --root <root vertex id> 
+//                  --target <target vertex id>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 #include <queue>
 #include "omp.h"
@@ -38,50 +38,10 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    string dataset_path;
-    size_t root_vid;
-    unsigned threadnum;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.root_vid = 0;
-    arguments.dataset_path.clear();
-    arguments.threadnum = 1;
+    arg.add_arg("root","0","root/starting vertex");
 }
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--root") 
-        {
-            i++;
-            arguments.root_vid=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--threadnum")
-        {
-            i++;
-            arguments.threadnum=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
-
 //==============================================================//
 typedef pair<size_t,size_t> data_pair;
 class comp
@@ -94,13 +54,15 @@ public:
 };
 
 
-void dijkstra(graph_t& g, size_t src, gBenchPerf_event & perf, int perf_group)
+void sssp(graph_t& g, size_t src, gBenchPerf_event & perf, int perf_group)
 {
     priority_queue<data_pair, vector<data_pair>, comp> PQ;
     
     perf.open(perf_group);
     perf.start(perf_group);
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
     // initialize
     vertex_iterator src_vit = g.find_vertex(src);
     src_vit->property().distance = 0;
@@ -128,7 +90,9 @@ void dijkstra(graph_t& g, size_t src, gBenchPerf_event & perf, int perf_group)
             }
         }
     }
-
+#ifdef SIM
+    SIM_END(true);
+#endif
     perf.stop(perf_group);
     return;
 }
@@ -137,7 +101,7 @@ inline unsigned vertex_distributor(uint64_t vid, unsigned threadnum)
 {
     return vid%threadnum;
 }
-void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
+void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
 {
     vertex_iterator rootvit=g.find_vertex(root);
     rootvit->property().distance = 0;
@@ -228,7 +192,7 @@ void parallel_dijkstra(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_m
 //==============================================================//
 void output(graph_t& g)
 {
-    cout<<"Dijkstra Results: \n";
+    cout<<"Results: \n";
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
@@ -256,27 +220,42 @@ void reset_graph(graph_t & g)
 int main(int argc, char * argv[])
 {
     graphBIG::print();
-    cout<<"Benchmark: Dijkstra shortest path\n";
+    cout<<"Benchmark: sssp shortest path\n";
     double t1, t2;
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg, false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
+
+    size_t root,threadnum;
+    arg.get_value("root",root);
+    arg.get_value("threadnum",threadnum);
 
 
     graph_t graph;
     cout<<"loading data... \n";
 
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
+#ifndef EDGES_ONLY    
+    if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+        return -1;
+#endif
 
     size_t vertex_num = graph.num_vertices();
     size_t edge_num = graph.num_edges();
@@ -286,8 +265,6 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n\n";
 #endif
 
-    // input arguments
-    size_t root = arguments.root_vid;
 
     // sanity check
     if (graph.find_vertex(root)==graph.vertices_end()) 
@@ -300,7 +277,7 @@ int main(int argc, char * argv[])
     cout<<"Shortest Path: source-"<<root;
     cout<<"...\n";
 
-    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    gBenchPerf_multi perf_multi(threadnum, perf);
     unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
     double elapse_time = 0;
@@ -309,17 +286,18 @@ int main(int argc, char * argv[])
     {
         t1 = timer::get_usec();
 
-        if (arguments.threadnum==1)
-            dijkstra(graph, root, perf, i);
+        if (threadnum==1)
+            sssp(graph, root, perf, i);
         else
-            parallel_dijkstra(graph, root, arguments.threadnum, perf_multi, i);
+            parallel_sssp(graph, root, threadnum, perf_multi, i);
         
         t2 = timer::get_usec();
         elapse_time += t2-t1;
+        if ((i+1)<run_num) reset_graph(graph);
     }
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<elapse_time/run_num<<" sec\n";
-    if (arguments.threadnum == 1)
+    if (threadnum == 1)
         perf.print();
     else
         perf_multi.print();

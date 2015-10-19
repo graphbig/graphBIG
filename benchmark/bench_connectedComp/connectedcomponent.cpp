@@ -3,11 +3,14 @@
 //
 // Usage: ./connectedcomponent.exe --dataset <dataset path>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 #include "omp.h"
 #include <queue>
+#ifdef SIM
+#include "SIM.h"
+#endif
 
 #define EDGE_MARK 1
 #define MY_INFINITY 0xffffff00
@@ -37,42 +40,6 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
-{
-    string dataset_path;
-    unsigned threadnum;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-    arguments.threadnum = 1;
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else if (inputarg[i]=="--threadnum")
-        {
-            i++;
-            arguments.threadnum=atol(inputarg[i].c_str());
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
 
 //==============================================================//
 inline unsigned vertex_distributor(size_t vid, unsigned threadnum)
@@ -105,7 +72,9 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
                 rootvit->property().level = 0;
                 rootvit->property().label = root;
                 global_input_tasks[vertex_distributor(root, threadnum)].push_back(root);
+                stop = false;
             }
+            #pragma omp barrier
             while(!stop)
             {
                 #pragma omp barrier
@@ -202,7 +171,9 @@ size_t connected_component(graph_t& g, gBenchPerf_event & perf, int perf_group)
 
     perf.open(perf_group);
     perf.start(perf_group);
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
     for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
         if (vit->property().level == MY_INFINITY) 
@@ -211,7 +182,9 @@ size_t connected_component(graph_t& g, gBenchPerf_event & perf, int perf_group)
             ret++;
         }
     }
-
+#ifdef SIM
+    SIM_END(true);
+#endif
     perf.stop(perf_group);
 
     return ret;
@@ -242,25 +215,38 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: connected component\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg, false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
+
+    size_t threadnum;
+    arg.get_value("threadnum",threadnum);
 
     double t1, t2;
     graph_t graph;
 
     cout<<"loading data... \n";
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
+#ifndef EDGES_ONLY
+    if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+        return -1;
+#endif
+    
     size_t vertex_num = graph.num_vertices();
     size_t edge_num = graph.num_edges();
     t2 = timer::get_usec();
@@ -272,7 +258,7 @@ int main(int argc, char * argv[])
     cout<<"\ncomputing connected component...\n";
     size_t component_num;
     
-    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    gBenchPerf_multi perf_multi(threadnum, perf);
     unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
     double elapse_time = 0;
@@ -281,19 +267,19 @@ int main(int argc, char * argv[])
     {
         t1 = timer::get_usec();
 
-        if (arguments.threadnum == 1)
+        if (threadnum == 1)
             component_num = connected_component(graph, perf, i);
         else
-            component_num = parallel_cc(graph, arguments.threadnum, perf_multi, i);
+            component_num = parallel_cc(graph, threadnum, perf_multi, i);
 
         t2 = timer::get_usec();
         elapse_time += t2-t1;
-        reset_graph(graph);
+        if ((i+1)<run_num) reset_graph(graph);
     }
     cout<<"== total component num: "<<component_num<<endl;
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<elapse_time/run_num<<" sec\n";
-    if (arguments.threadnum == 1)
+    if (threadnum == 1)
         perf.print();
     else
         perf_multi.print();

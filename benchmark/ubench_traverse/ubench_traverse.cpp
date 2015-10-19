@@ -3,9 +3,9 @@
 //
 // Usage: ./graphupdate --delete <vertex #> --dataset <dataset path>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
-#include "../lib/perf.h"
+#include "common.h"
+#include "def.h"
+#include "perf.h"
 #include "openG.h"
 
 using namespace std;
@@ -34,35 +34,6 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
-{
-    string dataset_path;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
 
 //==============================================================//
 
@@ -97,12 +68,16 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: ubench-traverse\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
 
     graph_t g;
     double t1, t2;
@@ -110,12 +85,12 @@ int main(int argc, char * argv[])
     cout<<"loading data... \n";
 
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (g.load_csv_vertices(vfile, true, "|,", 0) == -1)
+    if (g.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (g.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (g.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
 
     size_t vertex_num = g.num_vertices();

@@ -3,12 +3,13 @@
 //
 // Usage: ./tc.exe --dataset <dataset path>
 
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 #include "omp.h"
 #include <set>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -18,7 +19,7 @@ public:
     vertex_property():count(0){}
 
     uint64_t count;
-    std::set<uint64_t> neighbor_set;
+    std::vector<uint64_t> neighbor_set;
 };
 
 class edge_property
@@ -36,47 +37,11 @@ typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
 
-struct arg_t
-{
-    string dataset_path;
-    unsigned threadnum;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-    arguments.threadnum=1;
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else if (inputarg[i]=="--threadnum")
-        {
-            i++;
-            arguments.threadnum=atol(inputarg[i].c_str());
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
-
 //==============================================================//
-size_t get_intersect_cnt(set<size_t>& setA, set<size_t>& setB)
+size_t get_intersect_cnt(vector<size_t>& setA, vector<size_t>& setB)
 {
     size_t ret=0;
-    set<uint64_t>::iterator iter1=setA.begin(), iter2=setB.begin();
+    vector<uint64_t>::iterator iter1=setA.begin(), iter2=setB.begin();
 
     while (iter1!=setA.end() && iter2!=setB.end()) 
     {
@@ -95,7 +60,21 @@ size_t get_intersect_cnt(set<size_t>& setA, set<size_t>& setB)
     return ret;
 }
 
-
+void tc_init(graph_t& g)
+{
+    // prepare neighbor set for each vertex
+    for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
+    {
+        vit->property().count = 0;
+        vector<uint64_t> & cur_set = vit->property().neighbor_set;
+        cur_set.reserve(vit->edges_size());
+        for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
+        {
+            cur_set.push_back(eit->target());
+        }
+        std::sort(cur_set.begin(),cur_set.end());
+    }
+}
 
 size_t triangle_count(graph_t& g, gBenchPerf_event & perf, int perf_group)
 {
@@ -104,28 +83,17 @@ size_t triangle_count(graph_t& g, gBenchPerf_event & perf, int perf_group)
 
     size_t ret=0;
 
-    // prepare neighbor set for each vertex
-    for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
-    {
-        vit->property().count = 0;
-        set<uint64_t> & cur_set = vit->property().neighbor_set;
-        for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
-        {
-            cur_set.insert(eit->target());
-        }
-    }
-
     // run triangle count now
     for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
-        set<uint64_t> & src_set = vit->property().neighbor_set;
+        vector<uint64_t> & src_set = vit->property().neighbor_set;
 
         for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
         {
             if (vit->id() > eit->target()) continue; // skip reverse edges
             vertex_iterator vit_targ = g.find_vertex(eit->target());
 
-            set<uint64_t> & dest_set = vit_targ->property().neighbor_set;
+            vector<uint64_t> & dest_set = vit_targ->property().neighbor_set;
             size_t cnt = get_intersect_cnt(src_set, dest_set);
 
             vit->property().count += cnt;
@@ -145,46 +113,131 @@ size_t triangle_count(graph_t& g, gBenchPerf_event & perf, int perf_group)
     perf.stop(perf_group);
     return ret;
 }
-size_t parallel_triangle_count(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int perf_group)
+
+void gen_workset(graph_t& g, vector<unsigned>& workset, unsigned threadnum)
+{
+    unsigned chunk = (unsigned)ceil(g.num_edges()/(double)threadnum);
+    unsigned last=0, curr=0, th=1;
+    workset.clear();
+    workset.resize(threadnum+1,0);
+    for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
+    {
+        curr += vit->edges_size();
+        if ((curr-last)>=chunk)
+        {
+            last = curr;
+            workset[th] = vit->id();
+            if (th<threadnum) th++;
+        }
+    }
+    workset[threadnum] = g.num_vertices();
+    //for (unsigned i=0;i<=threadnum;i++)
+    //    cout<<workset[i]<<" ";
+    //cout<<endl;
+}
+
+void parallel_tc_init(graph_t& g, unsigned threadnum)
+{
+    vector<unsigned> ws;
+    gen_workset(g, ws, threadnum);
+
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+
+        // prepare neighbor set for each vertex        
+        for (uint64_t vid=ws[tid];vid<ws[tid+1];vid++)
+        {
+            vertex_iterator vit = g.find_vertex(vid);
+            if (vit == g.vertices_end()) continue;
+
+            vit->property().count = 0;
+            vector<uint64_t> & cur_set = vit->property().neighbor_set;
+            cur_set.reserve(vit->edges_size());
+            for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
+            {
+                cur_set.push_back(eit->target());
+            }
+            std::sort(cur_set.begin(),cur_set.end());
+        }
+    }
+}
+
+void parallel_workset_init(graph_t&g, vector<unsigned>& workset, unsigned threadnum)
+{
+    vector<unsigned> n_op(g.num_vertices(),0);
+    unsigned totalcnt=0;
+    vector<unsigned> ws;
+    gen_workset(g, ws, threadnum);
+
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+   
+        unsigned tot=0; 
+        for (uint64_t vid=ws[tid];vid<ws[tid+1];vid++)
+        {
+            vertex_iterator vit = g.find_vertex(vid);
+            if (vit == g.vertices_end()) continue;
+
+            for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
+            {
+                vertex_iterator vit_targ = g.find_vertex(eit->target());
+                n_op[vid] += vit->edges_size() + vit_targ->edges_size();
+            }
+            tot += n_op[vid];
+        }
+        __sync_fetch_and_add(&(totalcnt),tot);
+    }
+    workset.clear();
+    workset.resize(threadnum+1,0);
+    unsigned last=0, cnt=0, th=1;
+    unsigned cnt_chunk = (unsigned)ceil(totalcnt/(double)threadnum);
+    for (uint64_t vid=0; vid<g.num_vertices();vid++)
+    {
+        cnt += n_op[vid];
+        if ((cnt-last) > cnt_chunk)
+        {
+            if (th<threadnum) workset[th] = vid;
+            th++;
+            last = cnt;
+        }
+    }
+    workset[threadnum] = g.num_vertices();
+    
+}
+
+size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>& workset, 
+        gBenchPerf_multi & perf, int perf_group)
 {
     size_t ret=0;
-    uint64_t chunk = (unsigned)ceil(g.num_vertices()/(double)threadnum);
+    
     #pragma omp parallel num_threads(threadnum)
     {
         unsigned tid = omp_get_thread_num();
 
         perf.open(tid, perf_group);
         perf.start(tid, perf_group);  
-        unsigned start = tid*chunk;
-        unsigned end = start + chunk;
+        unsigned start = workset[tid];
+        unsigned end = workset[tid+1];
         if (end > g.num_vertices()) end = g.num_vertices();
+        
+        // for test only
+        //if (end > (start+1000)) end = start+1000;
 
-        // prepare neighbor set for each vertex        
-        for (uint64_t vid=start;vid<end;vid++)
-        {
-            vertex_iterator vit = g.find_vertex(vid);
-            
-            vit->property().count = 0;
-            set<uint64_t> & cur_set = vit->property().neighbor_set;
-            for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
-            {
-                cur_set.insert(eit->target());
-            }
-        }
-        #pragma omp barrier
         // run triangle count now
         for (uint64_t vid=start;vid<end;vid++)
         {
             vertex_iterator vit = g.find_vertex(vid);
 
-            set<uint64_t> & src_set = vit->property().neighbor_set;
+            vector<uint64_t> & src_set = vit->property().neighbor_set;
 
             for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++) 
             {
                 if (vit->id() > eit->target()) continue; // skip reverse edges
                 vertex_iterator vit_targ = g.find_vertex(eit->target());
 
-                set<uint64_t> & dest_set = vit_targ->property().neighbor_set;
+                vector<uint64_t> & dest_set = vit_targ->property().neighbor_set;
                 size_t cnt = get_intersect_cnt(src_set, dest_set);
 
                 __sync_fetch_and_add(&(vit->property().count), cnt);
@@ -224,7 +277,6 @@ void reset_graph(graph_t & g)
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
         vit->property().count = 0;
-        vit->property().neighbor_set.clear();
     }
 
 }
@@ -234,25 +286,37 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: triangle count\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg,false);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path, separator;
+    arg.get_value("dataset",path);
+    arg.get_value("separator",separator);
+
+    size_t threadnum;
+    arg.get_value("threadnum",threadnum);
 
     double t1, t2;
     graph_t graph;
 
     cout<<"loading data... \n";
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.csv";
+    string efile = path + "/edge.csv";
 
-    if (graph.load_csv_vertices(vfile, true, "|,", 0) == -1)
+#ifndef EDGES_ONLY    
+    if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
-    if (graph.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+        return -1;
+#endif
 
     uint64_t vertex_num = graph.num_vertices();
     uint64_t edge_num = graph.num_edges();
@@ -262,10 +326,21 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
-    cout<<"\ncomputing triangle count...\n";
+    cout<<"\npreparing neighbor sets..."<<endl;
+    vector<unsigned> workset;
+    if (threadnum==1)
+        tc_init(graph);
+    else
+    {
+        parallel_tc_init(graph, threadnum);
+        cout<<"preparing workset..."<<endl;
+        //parallel_workset_init(graph, workset, arguments.threadnum);
+        gen_workset(graph, workset, threadnum);
+    }
+    cout<<"\ncomputing triangle count..."<<endl;
     size_t tcount;
 
-    gBenchPerf_multi perf_multi(arguments.threadnum, perf);
+    gBenchPerf_multi perf_multi(threadnum, perf);
     unsigned run_num = ceil(perf.get_event_cnt() /(double) DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
     double elapse_time = 0;
@@ -274,18 +349,19 @@ int main(int argc, char * argv[])
     {
         t1 = timer::get_usec();
 
-        if (arguments.threadnum==1)
+        if (threadnum==1)
             tcount = triangle_count(graph, perf, i);
         else
-            tcount = parallel_triangle_count(graph, arguments.threadnum, perf_multi, i);
+            tcount = parallel_triangle_count(graph, threadnum, workset, perf_multi, i);
         t2 = timer::get_usec();
 
         elapse_time += t2 - t1;
+        if ((i+1)<run_num) reset_graph(graph);
     }
     cout<<"== total triangle count: "<<tcount<<endl;
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<elapse_time/run_num<<" sec\n";
-    if (arguments.threadnum == 1)
+    if (threadnum == 1)
         perf.print();
     else
         perf_multi.print();

@@ -8,23 +8,33 @@ a.out
 *.swap
 *~
 output.log
+*.orig
 
 # ignore ctags file
 tags
 
 # ignore executable files
-bfs
-dfs
-dc
-connectedcomponent
-bc
-tc
-dijkstra
-kcore
-graphupdate
-graphconstruct
-moralization
+benchmark/bench_BFS/bfs
+benchmark/bench_DFS/dfs
+benchmark/bench_degreeCentr/dc
+benchmark/bench_connectedComp/connectedcomponent
+benchmark/bench_betweennessCentr/bc
+benchmark/bench_triangleCount/tc
+benchmark/bench_shortestPath/sssp
+benchmark/bench_kCore/kcore
+benchmark/bench_graphUpdate/graphupdate
+benchmark/bench_graphConstruct/graphconstruct
+benchmark/bench_TopoMorph/topomorph
+benchmark/bench_gibbsInference/bayes_net
+
+benchmark/ubench_add/ubench_add
+benchmark/ubench_delete/ubench_delete
+benchmark/ubench_find/ubench_find
+benchmark/ubench_traverse/ubench_traverse
+
+
 
 # ignore untar libpfm sources
-benchmark/tools/libpfm-4.5.0
+tools/libpfm-4.5.0
+tools/libpfm-4.6.0
 

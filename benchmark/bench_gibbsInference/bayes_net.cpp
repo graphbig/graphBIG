@@ -15,10 +15,12 @@
 #include <set>
 #include <algorithm>
 #include <random>
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
-
+#ifdef SIM
+#include "SIM.h"
+#endif
 #define _ERROR_ID 99999
 #define SEED 123
 
@@ -102,57 +104,12 @@ typedef graph_t::edge_iterator    peit_t;
 typedef uint64_t                   vid_t;
 
 //==============================================================//
-
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    string dataset;
-    size_t root_vid;
-    unsigned value;
-    unsigned iteration;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.root_vid = 0;
-    arguments.dataset.clear();
-    arguments.value = 1;
-    arguments.iteration = 1000;
+    arg.add_arg("root","0","root/starting vertex");
+    arg.add_arg("val","1","estimate value");
+    arg.add_arg("iter","1000","iteration number");
 }
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1; i<inputarg.size(); i++)
-    {
-
-        if (inputarg[i]=="--root")
-        {
-            i++;
-            arguments.root_vid=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--val")
-        {
-            i++;
-            arguments.value=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--iter")
-        {
-            i++;
-            arguments.iteration=atol(inputarg[i].c_str());
-        }
-        else if (inputarg[i]=="--dataset")
-        {
-            i++;
-            arguments.dataset=inputarg[i];
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
-
 //==============================================================//
 
 void gibbs_sampler(graph_t * g, set<vid_t> & evidence_nodes)
@@ -465,12 +422,21 @@ int main(int argc, char* argv[])
     graphBIG::print();
     cout<<"Benchmark: Gibbs Inference\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    gBenchPerf_event perf(inputarg);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path;
+    arg.get_value("dataset",path);
+
+    size_t root,value,iteration;
+    arg.get_value("root",root);
+    arg.get_value("val",value);
+    arg.get_value("iter",iteration);
 
     set<vid_t> evidence_nodes;
     vector<string> vid2node;
@@ -491,7 +457,7 @@ int main(int argc, char* argv[])
         t1 = timer::get_usec();
 
         vid2node.clear();
-        load_graph(g, arguments.dataset, vid2node);
+        load_graph(g, path, vid2node);
 
         size_t vertex_num = g.vertex_num();
         size_t edge_num = g.edge_num();
@@ -509,10 +475,15 @@ int main(int argc, char* argv[])
             evidence_nodes.insert(rand()%vertex_num);
 
         t1 = timer::get_usec();
+        perf.open(i);
         perf.start(i);
-
-        result = gibbs_estimate(&g, evidence_nodes, arguments.root_vid, arguments.value, arguments.iteration);
-
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif
+        result = gibbs_estimate(&g, evidence_nodes, root, value, iteration);
+#ifdef SIM
+    SIM_END(true);
+#endif
         perf.stop(i);
         t2 = timer::get_usec();
 
@@ -523,8 +494,8 @@ int main(int argc, char* argv[])
 #endif
     }
     // perform Gibbs sampling for 2000 steps
-    cout << "\nEstimate by "<< arguments.iteration <<" steps Gibbs sampling:\n";
-    cout << "p("<<vid2node[arguments.root_vid]<<"="<<arguments.value<<"|";
+    cout << "\nEstimate by "<< iteration <<" steps Gibbs sampling:\n";
+    cout << "p("<<vid2node[root]<<"="<<value<<"|";
     for(set<vid_t>::iterator iter=evidence_nodes.begin(); iter!=evidence_nodes.end(); iter++)
     {
         if (iter!=evidence_nodes.begin())
