@@ -107,8 +107,8 @@ void kernel(uint32_t * vplist,
         uint64_t vid = inworklist.get_item(v);
         if (vplist[vid]==MY_INFINITY)
         {
-            unsigned int num_nbr = graph.get_vertex_degree(vid);
-            unsigned int nbr_off = graph.get_firstedge_index(vid);
+            uint64_t nbr_off = graph.get_firstedge_index(vid);
+            uint64_t num_nbr = graph.get_edge_index_end(vid) - nbr_off;
 
             uint32_t local_rand = randlist[vid];
             bool found_larger=false;
@@ -133,7 +133,6 @@ void kernel(uint32_t * vplist,
 }
 
 void cuda_graph_coloring(uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint64_t vertex_cnt, 
@@ -178,7 +177,7 @@ void cuda_graph_coloring(uint64_t * vertexlist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // initialize the worklists for in & out
     my_worklist worklist1, worklist2;

@@ -37,7 +37,7 @@ void kernel(uint32_t * vplist,
     {
         uint64_t start, end;
         start = graph.get_firstedge_index(tid);
-        end = start + graph.get_vertex_degree(tid);
+        end = graph.get_edge_index_end(tid);
         
         uint32_t cost = vplist[tid];
 
@@ -73,7 +73,6 @@ void kernel2(uint32_t * vplist,
 
 
 void cuda_SSSP(uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint32_t * eproplist,
@@ -123,7 +122,7 @@ void cuda_SSSP(uint64_t * vertexlist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     uint32_t zeronum=0;
     bool truenum=true;

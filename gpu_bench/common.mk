@@ -1,6 +1,6 @@
 CXX_FLAGS+=-std=c++0x -Wall -Wno-deprecated
-INCLUDE+=-I${ROOT}/benchmark/tools/include -I${ROOT}/openG
-EXTRA_CXX_FLAGS+=-L${ROOT}/benchmark/tools/lib
+INCLUDE+=-I${ROOT}/common -I${ROOT}/openG
+EXTRA_CXX_FLAGS+=-L${ROOT}/tools/lib
 
 NVCC=nvcc
 
@@ -8,10 +8,21 @@ OUTPUT_LOG=output.log
 
 LIBS=$(EXTRA_LIBS)
 
+ifeq (${PFM},0)
+  CXX_FLAGS += -DNO_PFM
+else
+  EXTRA_LIBS += -lpfm_cxx -lpfm
+  INCLUDE += -I${ROOT}/tools/include
+endif
+
 ifeq (${DEBUG},1)
   CXX_FLAGS += -DDEBUG -g
 else
   CXX_FLAGS +=-O3
+endif
+
+ifeq (${GSHELL},1)
+  CXX_FLAGS += -DEXTERNAL_CSR
 endif
 
 ifeq (${VERIFY},1)

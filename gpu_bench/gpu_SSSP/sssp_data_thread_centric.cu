@@ -89,16 +89,16 @@ void kernel(uint32_t * vplist,
     if (tid >= inworklist.get_item_num()) return;
 
     uint64_t v = inworklist.get_item(tid);
-    unsigned num_edge = graph.get_vertex_degree(v);
-    unsigned edge_ptr = graph.get_firstedge_index(v);
+    uint64_t e_begin = graph.get_edge_index_end(v);
+    uint64_t e_end = graph.get_firstedge_index(v);
     uint32_t cost = vplist[v];
 
     uint64_t local_worklist[LOCAL_SIZE]; 
     uint32_t work_size=0;
-    for (unsigned i=0;i<num_edge;i++)
+    for (unsigned i=e_begin;i<e_end;i++)
     {
-        uint64_t vid = graph.get_edge_dest(i+edge_ptr);
-        uint32_t new_dist = cost + eplist[i+edge_ptr];
+        uint64_t vid = graph.get_edge_dest(i);
+        uint32_t new_dist = cost + eplist[i];
         if ( update[vid] > new_dist)
         {
             if (atomicMin(&(update[vid]), new_dist)>new_dist)
@@ -133,7 +133,6 @@ void kernel2(uint32_t * vplist,
 
 
 void cuda_SSSP(uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint32_t * eproplist,
@@ -182,7 +181,7 @@ void cuda_SSSP(uint64_t * vertexlist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // initialize the worklists for in & out
     my_worklist worklist1, worklist2;

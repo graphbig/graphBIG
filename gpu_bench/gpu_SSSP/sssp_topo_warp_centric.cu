@@ -51,9 +51,9 @@ void kernel(uint32_t * vplist,
     {
         if (mask[v])
         {
-            unsigned int num_nbr = graph.get_vertex_degree(v);
-            unsigned int nbr_off = graph.get_firstedge_index(v);
-
+            uint64_t nbr_off = graph.get_firstedge_index(v);
+            uint64_t num_nbr = graph.get_edge_index_end(v) - nbr_off;
+            
             uint32_t cost = vplist[v];
             for(uint64_t i=lane_id; i<num_nbr; i+=WARP_SZ)
             {
@@ -88,7 +88,6 @@ void kernel2(uint32_t * vplist,
 
 
 void cuda_SSSP(uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint32_t * eproplist,
@@ -139,7 +138,7 @@ void cuda_SSSP(uint64_t * vertexlist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     uint32_t zeronum=0;
     bool truenum=true;

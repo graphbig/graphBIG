@@ -14,19 +14,25 @@
     }\
 }
 
+#define cudaLastErr { \
+    cudaError_t error = cudaGetLastError(); \
+    if (error != cudaSuccess) { \
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(error), __FILE__, __LINE__);\
+        exit(-1);\
+    }\
+} 
+
 // my infinity
 #define MY_INFINITY    0xffffff00
 
 typedef struct cudaGraph
 {
     void read(uint64_t * vertexlist, 
-            uint64_t * degreelist, 
             uint64_t * edgelist, 
             uint64_t v_cnt, 
             uint64_t e_cnt)
     {
         vlist = vertexlist;
-        dlist = degreelist;
         elist = edgelist;
         vertex_cnt = v_cnt;
         edge_cnt = e_cnt;
@@ -34,8 +40,7 @@ typedef struct cudaGraph
 
     void cudaGraphAlloc()
     {
-        cudaErrCheck( cudaMalloc((void**)&(vlist), vertex_cnt*sizeof(uint64_t)) );
-        cudaErrCheck( cudaMalloc((void**)&(dlist), vertex_cnt*sizeof(uint64_t)) );
+        cudaErrCheck( cudaMalloc((void**)&(vlist), (1+vertex_cnt)*sizeof(uint64_t)) );
         cudaErrCheck( cudaMalloc((void**)&(elist), edge_cnt*sizeof(uint64_t)) );
     }
     void cudaGraphCopy(struct cudaGraph * other)
@@ -44,9 +49,7 @@ typedef struct cudaGraph
         other->edge_cnt = edge_cnt;
 
         other->cudaGraphAlloc();
-        cudaErrCheck( cudaMemcpy(other->vlist, vlist, vertex_cnt*sizeof(uint64_t), 
-                    cudaMemcpyHostToDevice) );
-        cudaErrCheck( cudaMemcpy(other->dlist, dlist, vertex_cnt*sizeof(uint64_t), 
+        cudaErrCheck( cudaMemcpy(other->vlist, vlist, (1+vertex_cnt)*sizeof(uint64_t), 
                     cudaMemcpyHostToDevice) );
         cudaErrCheck( cudaMemcpy(other->elist, elist, edge_cnt*sizeof(uint64_t), 
                     cudaMemcpyHostToDevice) );
@@ -55,14 +58,18 @@ typedef struct cudaGraph
     void cudaGraphFree()
     {
         cudaErrCheck( cudaFree(vlist) );
-        cudaErrCheck( cudaFree(dlist) );
         cudaErrCheck( cudaFree(elist) );
     }
 
 
     __device__ inline uint64_t get_vertex_degree(uint64_t vertex_id)
     {
-        return dlist[vertex_id];
+        return vlist[vertex_id+1]-vlist[vertex_id];
+    }
+
+    __device__ inline uint64_t get_edge_index_end(uint64_t vertex_id)
+    {
+        return vlist[vertex_id+1];
     }
 
     __device__ inline uint64_t get_firstedge_index(uint64_t vertex_id)
@@ -79,7 +86,7 @@ typedef struct cudaGraph
         return &(elist[index]);
     }
 
-    uint64_t *vlist, *dlist, *elist;
+    uint64_t *vlist, *elist;
     uint64_t vertex_cnt, edge_cnt;
 }cudaGraph;
 

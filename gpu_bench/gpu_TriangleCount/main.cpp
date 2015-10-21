@@ -11,7 +11,7 @@
 using namespace std;
 
 extern unsigned cuda_triangle_count(
-        uint64_t * vertexlist, uint64_t * degreelist, 
+        uint64_t * vertexlist, 
         uint64_t * edgelist, uint32_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt);
 
@@ -119,8 +119,8 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     //================================================//
     // prepare compact data for CUDA side
-    vector<uint64_t> vertexlist, degreelist, edgelist; 
-    g.to_CSR_Graph(vertexlist, degreelist, edgelist);
+    vector<uint64_t> vertexlist, edgelist; 
+    g.to_CSR_Graph(vertexlist, edgelist);
     t2 = timer::get_usec();
 
     cout<<"== data conversion time: "<<t2-t1<<" sec\n"<<endl;
@@ -132,9 +132,9 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     //================================================//
     // call CUDA function 
-    tcount = cuda_triangle_count(&(vertexlist[0]), &(degreelist[0]), 
+    tcount = cuda_triangle_count(&(vertexlist[0]), 
             &(edgelist[0]), &(vproplist[0]), 
-            vertexlist.size(), edgelist.size());
+            vertexlist.size()-1, edgelist.size());
     //================================================//
     t2 = timer::get_usec();
     

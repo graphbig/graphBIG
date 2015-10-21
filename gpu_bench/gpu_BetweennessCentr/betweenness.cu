@@ -41,7 +41,7 @@ __global__ void kernel_forward_phase(cudaGraph graph,
     uint64_t u = tid;
     uint64_t start, end;
     start = graph.get_firstedge_index(u);
-    end = start + graph.get_vertex_degree(u);
+    end = graph.get_edge_index_end(u);
     for (uint64_t i=start; i<end; i++)
     {
         uint64_t w = graph.get_edge_dest(i);
@@ -69,7 +69,7 @@ __global__ void kernel_backward_phase(cudaGraph graph,
     float sum = 0;
     uint64_t start, end;
     start = graph.get_firstedge_index(u);
-    end = start + graph.get_vertex_degree(u);
+    end = graph.get_edge_index_end(u);
     for (uint64_t i=start; i<end; i++)
     {
         uint64_t w = graph.get_edge_dest(i);
@@ -93,7 +93,7 @@ __global__ void kernel_backsum_phase(cudaGraph graph,
     d_BC[tid] += d_delta[tid];
 }
 
-void cuda_betweenness_centr(uint64_t * vertexlist, uint64_t * degreelist, 
+void cuda_betweenness_centr(uint64_t * vertexlist, 
         uint64_t * edgelist, float * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt)
 {
@@ -135,7 +135,7 @@ void cuda_betweenness_centr(uint64_t * vertexlist, uint64_t * degreelist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // memcpy from host to device
     cudaEventRecord(start_event, 0);

@@ -51,8 +51,8 @@ void kernel(uint32_t * vplist,
     {
         if (vplist[v]==MY_INFINITY)
         {
-            unsigned int num_nbr = graph.get_vertex_degree(v);
-            unsigned int nbr_off = graph.get_firstedge_index(v);
+            uint64_t nbr_off = graph.get_firstedge_index(v);
+            uint64_t num_nbr = graph.get_edge_index_end(v) - nbr_off;
 
             uint32_t local_rand = randlist[v];
             bool found_larger=false;
@@ -77,7 +77,6 @@ void kernel(uint32_t * vplist,
 }
 
 void cuda_graph_coloring(uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint64_t vertex_cnt, 
@@ -125,7 +124,7 @@ void cuda_graph_coloring(uint64_t * vertexlist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // memcpy from host to device
     cudaEventRecord(start_event, 0);

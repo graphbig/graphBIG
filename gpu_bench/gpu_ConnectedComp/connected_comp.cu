@@ -24,7 +24,7 @@ __global__ void initialize(uint64_t * d_parents, uint64_t * d_shadow, bool * d_m
 
     uint64_t start, end;
     start = graph.get_firstedge_index(tid);
-    end = start + graph.get_vertex_degree(tid);
+    end = graph.get_edge_index_end(tid);
     for (uint64_t i=start; i<end; i++)
     {
         d_mask[i] = false;
@@ -125,7 +125,7 @@ __global__ void kernel_pointer_jumping(
     d_shadow[tid] = parent; 
 }
 
-void cuda_connected_comp(uint64_t * vertexlist, uint64_t * degreelist, 
+void cuda_connected_comp(uint64_t * vertexlist, 
         uint64_t * edgelist, uint64_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt)
 {
@@ -175,7 +175,7 @@ void cuda_connected_comp(uint64_t * vertexlist, uint64_t * degreelist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // memcpy from host to device
     cudaEventRecord(start_event, 0);

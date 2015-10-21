@@ -12,7 +12,6 @@ using namespace std;
 
 extern void cuda_SSSP(
         uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint32_t * eproplist,
@@ -80,6 +79,21 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
 }
 //==============================================================//
 
+#ifdef EXTERNAL_CSR
+void writeback(const string& fn, vector<uint32_t> & vproplist)
+{
+    ofstream fout;
+    fout.open(fn.c_str(),ofstream::binary);
+    if (fout.is_open()==false)
+    {
+        cout<<"cannot open file: "<<fn<<endl;
+        return;
+    }
+    fout.write((char*)&(vproplist[0]), sizeof(uint32_t)*vproplist.size());
+    fout.close();
+}
+#endif
+
 
 //==============================================================//
 
@@ -109,7 +123,18 @@ int main(int argc, char * argv[])
     
     cout<<"loading data... \n";
 
+    size_t vertex_num, edge_num;
+    vector<uint64_t> vertexlist, edgelist; 
+    
     t1 = timer::get_usec();
+#ifdef EXTERNAL_CSR
+    if (g.load_CSR_Graph(arguments.dataset_path, 
+            vertex_num,edge_num,vertexlist,edgelist)==false)
+    {
+        cout<<"cannot open csr files"<<endl;
+        return -1;
+    }
+#else
     string vfile = arguments.dataset_path + "/vertex.csv";
     string efile = arguments.dataset_path + "/edge.csv";
 
@@ -118,8 +143,9 @@ int main(int argc, char * argv[])
     if (g.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
         return -1;
 
-    size_t vertex_num = g.num_vertices();
-    size_t edge_num = g.num_edges();
+    vertex_num = g.num_vertices();
+    edge_num = g.num_edges();
+#endif    
     t2 = timer::get_usec();
 
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
@@ -131,8 +157,7 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     //================================================//
     // prepare compact data for CUDA side
-    vector<uint64_t> vertexlist, degreelist, edgelist; 
-    g.to_CSR_Graph(vertexlist, degreelist, edgelist);
+    g.to_CSR_Graph(vertexlist, edgelist);
     t2 = timer::get_usec();
 
     cout<<"== data conversion time: "<<t2-t1<<" sec\n"<<endl;
@@ -145,9 +170,9 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     //================================================//
     // call CUDA function 
-    cuda_SSSP(&(vertexlist[0]), &(degreelist[0]), 
+    cuda_SSSP(&(vertexlist[0]), 
             &(edgelist[0]), &(vproplist[0]),&(eproplist[0]), 
-            vertexlist.size(), edgelist.size(), arguments.root);
+            vertexlist.size()-1, edgelist.size(), arguments.root);
     //================================================//
     t2 = timer::get_usec();
     
@@ -157,7 +182,11 @@ int main(int argc, char * argv[])
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
-
+#ifdef EXTERNAL_CSR
+    string refile = arguments.dataset_path + "/result.array";
+    cout<<"\nResult wrote to file: "<<refile<<endl;
+    writeback(refile,vproplist);
+#endif 
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
     output(vproplist);

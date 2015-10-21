@@ -32,7 +32,26 @@ benchmark/ubench_delete/ubench_delete
 benchmark/ubench_find/ubench_find
 benchmark/ubench_traverse/ubench_traverse
 
-
+gpu_bench/gpu_BFS/bfs_data_thread_centric
+gpu_bench/gpu_BFS/bfs_data_warp_centric
+gpu_bench/gpu_BFS/bfs_topo_atomic
+gpu_bench/gpu_BFS/bfs_topo_frontier
+gpu_bench/gpu_BFS/bfs_topo_thread_centric
+gpu_bench/gpu_BFS/bfs_topo_unroll
+gpu_bench/gpu_BFS/bfs_topo_warp_centric
+gpu_bench/gpu_BetweennessCentr/betweenness
+gpu_bench/gpu_ConnectedComp/connected_comp
+gpu_bench/gpu_DegreeCentr/degree_centr
+gpu_bench/gpu_GraphColoring/gc_data_thread_centric
+gpu_bench/gpu_GraphColoring/gc_data_warp_centric
+gpu_bench/gpu_GraphColoring/gc_topo_thread_centric
+gpu_bench/gpu_GraphColoring/gc_topo_warp_centric
+gpu_bench/gpu_SSSP/sssp_data_thread_centric
+gpu_bench/gpu_SSSP/sssp_data_warp_centric
+gpu_bench/gpu_SSSP/sssp_topo_thread_centric
+gpu_bench/gpu_SSSP/sssp_topo_warp_centric
+gpu_bench/gpu_TriangleCount/triangle_count
+gpu_bench/gpu_kCore/kcore
 
 # ignore untar libpfm sources
 tools/libpfm-4.5.0

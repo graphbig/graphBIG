@@ -94,7 +94,7 @@ void kernel(uint32_t * vplist,
     {
         uint64_t start, end;
         start = graph.get_firstedge_index(vid);
-        end = start + graph.get_vertex_degree(vid);
+        end = graph.get_edge_index_end(vid);
         
         uint32_t local_rand = randlist[vid];
         bool found_larger=false;
@@ -117,7 +117,6 @@ void kernel(uint32_t * vplist,
 }
 
 void cuda_graph_coloring(uint64_t * vertexlist, 
-        uint64_t * degreelist, 
         uint64_t * edgelist, 
         uint32_t * vproplist,
         uint64_t vertex_cnt, 
@@ -159,7 +158,7 @@ void cuda_graph_coloring(uint64_t * vertexlist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // initialize the worklists for in & out
     my_worklist worklist1, worklist2;

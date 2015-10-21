@@ -40,7 +40,7 @@ void kernel(uint32_t * vplist,
     {
         uint64_t start, end;
         start = graph.get_firstedge_index(vid);
-        end = start + graph.get_vertex_degree(vid);
+        end = graph.get_edge_index_end(vid);
         for (uint64_t i=start;i<end;i++)
         {
             uint64_t dest = graph.get_edge_dest(i);
@@ -75,7 +75,7 @@ void kernel2(uint32_t * vplist,
         }
     }
 }
-unsigned cuda_kcore(uint64_t * vertexlist, uint64_t * degreelist, 
+unsigned cuda_kcore(uint64_t * vertexlist,  
         uint64_t * edgelist, uint32_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt,
         unsigned kcore)
@@ -122,7 +122,7 @@ unsigned cuda_kcore(uint64_t * vertexlist, uint64_t * degreelist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // memcpy from host to device
     cudaEventRecord(start_event, 0);

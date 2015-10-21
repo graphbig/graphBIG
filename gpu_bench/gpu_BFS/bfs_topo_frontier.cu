@@ -42,9 +42,9 @@ __global__ void BFS_kernel_1(
     {
         device_graph_frontier[tid] = false;
         uint64_t eidx = d_graph.get_firstedge_index(tid);
-        uint64_t sz = d_graph.get_vertex_degree(tid);
+        uint64_t eidx_end = d_graph.get_edge_index_end(tid);
 
-        for (size_t i=eidx; i<sz+eidx; i++)
+        for (size_t i=eidx; i<eidx_end; i++)
         {
             uint64_t vid = d_graph.get_edge_dest(i);
             if (device_graph_visited[vid]==false)
@@ -75,7 +75,7 @@ __global__ void BFS_kernel_2(
 }
 
 
-void cuda_BFS(uint64_t * vertexlist, uint64_t * degreelist, 
+void cuda_BFS(uint64_t * vertexlist, 
         uint64_t * edgelist, uint32_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt,
         uint64_t root)
@@ -128,7 +128,7 @@ void cuda_BFS(uint64_t * vertexlist, uint64_t * degreelist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     bool true_flag=true;
     uint32_t zero_flag=0;

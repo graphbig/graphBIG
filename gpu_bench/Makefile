@@ -10,9 +10,11 @@ all:
 clean:
 	@for d in ${SUBDIR}; do \
           ${MAKE} -C $$d clean; \
-        done
+  		  done
+	@rm -f output.log
 
 run: 
 	@for d in ${SUBDIR}; do \
 	  ${MAKE} -C $$d run; \
+	  cat $$d/output.log >> output.log; \
 	done

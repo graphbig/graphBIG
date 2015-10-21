@@ -47,8 +47,8 @@ void kernel(uint32_t * vplist, cudaGraph graph, unsigned curr, bool *changed) {
     {
         if(vplist[v] == curr)
         {
-            unsigned int num_nbr = graph.get_vertex_degree(v);
-            unsigned int nbr_off = graph.get_firstedge_index(v);
+            uint64_t nbr_off = graph.get_firstedge_index(v);
+            uint64_t num_nbr = graph.get_edge_index_end(v) - nbr_off;
             for(uint64_t i=lane_id; i<num_nbr; i+=WARP_SZ)
             {
                uint64_t vid = graph.get_edge_dest(i + nbr_off);
@@ -62,7 +62,7 @@ void kernel(uint32_t * vplist, cudaGraph graph, unsigned curr, bool *changed) {
     }
 }
 
-void cuda_BFS(uint64_t * vertexlist, uint64_t * degreelist, 
+void cuda_BFS(uint64_t * vertexlist, 
         uint64_t * edgelist, uint32_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt,
         uint64_t root)
@@ -104,7 +104,7 @@ void cuda_BFS(uint64_t * vertexlist, uint64_t * degreelist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     uint32_t zeronum=0;
     // memcpy from host to device

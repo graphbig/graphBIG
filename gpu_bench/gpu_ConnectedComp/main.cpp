@@ -11,7 +11,7 @@
 using namespace std;
 
 extern void cuda_connected_comp(
-        uint64_t * vertexlist, uint64_t * degreelist, 
+        uint64_t * vertexlist, 
         uint64_t * edgelist, uint64_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt);
 
@@ -71,7 +71,7 @@ void arg_parser(arg_t& arguments, vector<string>& inputarg)
 
 //==============================================================//
 
-void output(vector<uint64_t> & vproplist, vector<uint64_t> & degreelist)
+void output(vector<uint64_t> & vproplist)
 {
     cout<<"Connected Component Results:\n";
     for(size_t i=0;i<vproplist.size();i++)
@@ -119,8 +119,8 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     //================================================//
     // prepare compact data for CUDA side
-    vector<uint64_t> vertexlist, degreelist, edgelist; 
-    g.to_CSR_Graph(vertexlist, degreelist, edgelist);
+    vector<uint64_t> vertexlist, edgelist; 
+    g.to_CSR_Graph(vertexlist, edgelist);
     t2 = timer::get_usec();
 
     cout<<"== data conversion time: "<<t2-t1<<" sec\n"<<endl;
@@ -131,9 +131,9 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     //================================================//
     // call CUDA function 
-    cuda_connected_comp(&(vertexlist[0]), &(degreelist[0]), 
+    cuda_connected_comp(&(vertexlist[0]), 
             &(edgelist[0]), &(vproplist[0]), 
-            vertexlist.size(), edgelist.size());
+            vertexlist.size()-1, edgelist.size());
     //================================================//
     t2 = timer::get_usec();
     
@@ -146,7 +146,7 @@ int main(int argc, char * argv[])
 
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
-    output(vproplist, degreelist);
+    output(vproplist);
 #endif
 
     cout<<"==================================================================\n";

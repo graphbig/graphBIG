@@ -124,7 +124,7 @@ void kernel_step3(uint32_t * vplist, cudaGraph graph, unsigned * d_tcount)
 }
 
 
-unsigned cuda_triangle_count(uint64_t * vertexlist, uint64_t * degreelist, 
+unsigned cuda_triangle_count(uint64_t * vertexlist, 
         uint64_t * edgelist, uint32_t * vproplist,
         uint64_t vertex_cnt, uint64_t edge_cnt)
 {
@@ -165,7 +165,7 @@ unsigned cuda_triangle_count(uint64_t * vertexlist, uint64_t * degreelist,
     //  one for host side, one for device side
     cudaGraph h_graph, d_graph;
     // here copy only the pointers
-    h_graph.read(vertexlist, degreelist, edgelist, vertex_cnt, edge_cnt);
+    h_graph.read(vertexlist, edgelist, vertex_cnt, edge_cnt);
 
     // memcpy from host to device
     cudaEventRecord(start_event, 0);
