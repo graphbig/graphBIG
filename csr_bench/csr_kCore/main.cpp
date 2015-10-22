@@ -69,7 +69,7 @@ void output(vector<int16_t> & vproplist, unsigned kcore)
 int main(int argc, char * argv[])
 {
     graphBIG::print();
-    cout<<"Benchmark: GPU kCore Decomposition\n";
+    cout<<"Benchmark: kCore Decomposition\n";
 
     argument_parser arg;
     arg_init(arg);
@@ -139,7 +139,7 @@ int main(int argc, char * argv[])
     t2 = timer::get_usec();
     
 
-    cout<<"\nGPU kCore finish: \n";
+    cout<<"\nkCore finish: \n";
     cout<<"== kcore: "<<kcore<<"\n";
     cout<<"== remove #: "<<remove_cnt<<"\n";
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";

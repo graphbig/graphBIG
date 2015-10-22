@@ -46,7 +46,7 @@ void arg_init(argument_parser & arg)
 int main(int argc, char * argv[])
 {
     graphBIG::print();
-    cout<<"Benchmark: BFS\n";
+    cout<<"Tool: CSR data generation\n";
 
     argument_parser arg;
     arg_init(arg);

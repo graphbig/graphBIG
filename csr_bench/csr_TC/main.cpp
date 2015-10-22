@@ -91,7 +91,7 @@ void output(vector<int16_t> & vproplist)
 int main(int argc, char * argv[])
 {
     graphBIG::print();
-    cout<<"Benchmark: GPU Triangle Count\n";
+    cout<<"Benchmark: Triangle Count\n";
 
     argument_parser arg;
 #ifndef NO_PERF    
@@ -160,7 +160,7 @@ int main(int argc, char * argv[])
     t2 = timer::get_usec();
     
 
-    cout<<"\nGPU Triangle Count finish: \n";
+    cout<<"\nTriangle Count finish: \n";
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
     cout<<"== total triangle count: "<<tcount<<"\n";
 #ifndef ENABLE_VERIFY

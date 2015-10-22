@@ -58,7 +58,7 @@ void output(vector<uint16_t> & vproplist)
 int main(int argc, char * argv[])
 {
     graphBIG::print();
-    cout<<"Benchmark: omp Graph Coloring\n";
+    cout<<"Benchmark: Graph Coloring\n";
 
     argument_parser arg;
 #ifndef NO_PERF    
@@ -124,7 +124,7 @@ int main(int argc, char * argv[])
     t2 = timer::get_usec();
     
 
-    cout<<"\nomp Graph Coloring finish: \n";
+    cout<<"\nGraph Coloring finish: \n";
     cout<<"== thread num: "<<threadnum<<endl;
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
 #ifndef ENABLE_VERIFY

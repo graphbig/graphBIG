@@ -31,6 +31,7 @@ clean:
 	@rm -f output.log
 
 run: 
+	@rm -f output.log
 	@for d in ${SUBDIR}; do \
 	  ${MAKE} -C $$d run; \
 	  cat $$d/output.log >> output.log; \

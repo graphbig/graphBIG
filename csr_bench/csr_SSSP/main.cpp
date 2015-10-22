@@ -71,7 +71,7 @@ void output(vector<uint16_t> & vproplist)
 int main(int argc, char * argv[])
 {
     graphBIG::print();
-    cout<<"Benchmark: omp SSSP\n";
+    cout<<"Benchmark: SSSP\n";
 
     argument_parser arg;
     arg_init(arg);
@@ -140,7 +140,7 @@ int main(int argc, char * argv[])
     t2 = timer::get_usec();
     
 
-    cout<<"\nomp SSSP finish: \n";
+    cout<<"\nSSSP finish: \n";
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
