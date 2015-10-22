@@ -1,3 +1,8 @@
+## Version 3.0
+- Change benchmark argument interfaces
+- Add CPU benchmarks using CSR data format
+- Fix GPU benchamrk CSR format issues
+
 ## Version 2.0
 - Add GPU workloads
 - Update graph framework for GPU support
