@@ -47,7 +47,7 @@ endif
 
 EXTRA_CXX_FLAGS+=${TRAITS}
 
-ifeq (${OUTPUT}, on)
+ifeq (${OUTPUT}, 1)
   EXTRA_CXX_FLAGS+=-DENABLE_OUTPUT
 endif
 
