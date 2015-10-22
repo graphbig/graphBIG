@@ -49,6 +49,7 @@ int main(int argc, char * argv[])
     cout<<"Benchmark: BFS\n";
 
     argument_parser arg;
+    arg_init(arg);
 #ifndef NO_PERF    
     gBenchPerf_event perf;
     if (arg.parse(argc,argv,perf,false)==false)
@@ -123,7 +124,7 @@ int main(int argc, char * argv[])
     //================================================//
     t2 = timer::get_usec();
     
-    cout<<"== write time: "<<t2-t1<<" sec\n"<<endl;
+    cout<<"== write time: "<<t2-t1<<" sec"<<endl;
 
 
     cout<<"==================================================================\n";
