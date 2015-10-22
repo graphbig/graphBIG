@@ -44,7 +44,7 @@ Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [Grap
 [The World is Big and Linked: Whole Spectrum Industry Solutions towards Big Graphs](http://cci.drexel.edu/bigdata/bigdata2015/tutorials.html), _IEEE BigData 2015, Oct. 2015_
 
 ### Upcoming
-Version 3.0 is under test. It will include a redesigned interaction interface, multiple issue fixes, and a set of new benchmarks for architectural simulation purposes. 
+v3.0-beta is released. It includes a redesigned argument interface, multiple issue fixes, and a set of new benchmarks for architectural simulation purposes. We're still working on its testing and expecting to release a stable v3.0 soon. Since v3.0 is still at beta stage, issues may exist. Please feel to free to contact us if you notice an issue. 
 
 GraphBIG-Doc, a separate repository for documents, is under contruction and will be ready soon.
 
@@ -72,6 +72,10 @@ $ make run
 $ cat output.log
 ```
 
+### Documents
+
+Documents can be found in the [GraphBIG-Doc](https://github.com/graphbig/GraphBIG-Doc) repository under the same graphbig organization. 
+
 ### Datasets
 To cover the diverse features of graph data, GraphBIG present two types of graph data sets, real-world data and synthetic data. The real-world data sets can illustrate real graph data features, while the synthetic data can help workload characterizations because of its flexible data size.
 
@@ -96,10 +100,12 @@ feel free to contact us.
 BSD license
 
 ### Version
-2.0
+3.0-beta
 
 ### Contact us
-Lifeng Nai (lnai3 _at_ gatech.edu)
+Lifeng Nai (lnai3 _at_ gatech.edu / nailifeng _at_ gmail.com)
+
+Or submit issues via github
 
 **Graph Computing, Hell Yeah!**
 
