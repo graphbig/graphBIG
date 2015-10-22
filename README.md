@@ -9,14 +9,8 @@
 
 # GraphBIG
 GraphBIG is a graph benchmarking effort initiated by Georgia Tech __HPArch__ and IBM __System G__. By supporting a wide selection of workloads from both __CPU__ and __GPU__ sides,
-GraphBIG covers the broad spectrum of graph computing and fulfills multiple major requirements, including __framework__, __representativeness__, __coverage__, and graph __data support__.
+GraphBIG covers the broad spectrum of graph computing and fulfills multiple major requirements, including _framework_, _representativeness_, _coverage_, and graph _data support_.
 
-| | | |
-|:----:|---|----|
-|__Graph__|:arrow_right:| **Graph**s -- large or small, static or dynamic, topological or semantic, and properties or bayesian |
-|__B__|:arrow_right:|**B**enchmark Suites|
-|__I__|:arrow_right:|**I**BM System G  (http://systemg.research.ibm.com)  |
-|__G__|:arrow_right:|**G**eorgia Tech HPArch (http://comparch.gatech.edu/hparch)|
 
 ### Introduction
 GraphBIG is a comprehensive benchmark suites for graph computing. The workloads are selected from
@@ -50,9 +44,9 @@ Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [Grap
 [The World is Big and Linked: Whole Spectrum Industry Solutions towards Big Graphs](http://cci.drexel.edu/bigdata/bigdata2015/tutorials.html), _IEEE BigData 2015, Oct. 2015_
 
 ### Upcoming
-__GraphBIG-GPU__ now has been released!
+Version 3.0 is under test. It will include a redesigned interaction interface, multiple issue fixes, and a set of new benchmarks for architectural simulation purposes. 
 
-We're currently working on the release of version 3.0 beta, which will include a redesigned interaction interface, multiple issue fixes, and a set of new benchmarks for architectural simulation purposes. 
+GraphBIG-Doc, a separate repository for documents, is under contruction and will be ready soon.
 
 ### Compile/Run
 
