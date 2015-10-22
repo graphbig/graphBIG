@@ -53,6 +53,15 @@ gpu_bench/gpu_SSSP/sssp_topo_warp_centric
 gpu_bench/gpu_TriangleCount/triangle_count
 gpu_bench/gpu_kCore/kcore
 
+csr_bench/csr_BFS/csr_bfs
+csr_bench/csr_CComp/csr_cc
+csr_bench/csr_DC/csr_dc
+csr_bench/csr_GraphColoring/csr_graphcoloring
+csr_bench/csr_SSSP/csr_sssp
+csr_bench/csr_TC/csr_tc
+csr_bench/csr_kCore/csr_kcore
+csr_bench/tool_genCSR/genCSR
+
 # ignore untar libpfm sources
 tools/libpfm-4.5.0
 tools/libpfm-4.6.0
