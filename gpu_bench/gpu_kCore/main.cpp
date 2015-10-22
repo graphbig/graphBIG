@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 
 using namespace std;
@@ -38,45 +38,10 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    string dataset_path;
-    unsigned kcore;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-    arguments.kcore=3;
+    arg.add_arg("kcore", "3", "kCore k value");
 }
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else if (inputarg[i]=="--kcore")
-        {
-            i++;
-            arguments.kcore=atol(inputarg[i].c_str());
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
-}
-//==============================================================//
-
-
 //==============================================================//
 
 void output(vector<uint32_t> & vproplist, unsigned kcore)
@@ -98,28 +63,44 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: GPU kCore Decomposition\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path;
+    arg.get_value("dataset",path);
 
-    graph_t g;
+    size_t kcore;
+    arg.get_value("kcore",kcore);
+
     double t1, t2;
-    
+
     cout<<"loading data... \n";
 
     t1 = timer::get_usec();
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
-
-    if (g.load_csv_vertices(vfile, true, "|,", 0) == -1)
+    size_t vertex_num, edge_num;
+#ifdef EXTERNAL_CSR
+    if (g.load_CSR_Graph(path, 
+            vertex_num,edge_num,vertexlist,edgelist)==false)
+    {
+        cout<<"cannot open csr files"<<endl;
         return -1;
-    if (g.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
-        return -1;
+    }
+#else
+    string vfile = path + "/vertex.CSR";
+    string efile = path + "/edge.CSR";
 
-    size_t vertex_num = g.num_vertices();
-    size_t edge_num = g.num_edges();
+    vector<uint64_t> vertexlist, edgelist; 
+    
+
+    graph_t::load_CSR_Graph(vfile, efile,
+            vertex_num, edge_num,
+            vertexlist, edgelist);
+#endif    
     t2 = timer::get_usec();
 
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
@@ -128,15 +109,8 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
-    t1 = timer::get_usec();
+    
     //================================================//
-    // prepare compact data for CUDA side
-    vector<uint64_t> vertexlist, edgelist; 
-    g.to_CSR_Graph(vertexlist, edgelist);
-    t2 = timer::get_usec();
-
-    cout<<"== data conversion time: "<<t2-t1<<" sec\n"<<endl;
-
     vector<uint32_t> vproplist(vertex_num, 0);
     vector<bool> rmlist(vertex_num, false);
     //================================================//
@@ -148,22 +122,22 @@ int main(int argc, char * argv[])
     remove_cnt = cuda_kcore(&(vertexlist[0]), 
             &(edgelist[0]), &(vproplist[0]), 
             vertexlist.size()-1, edgelist.size(),
-            arguments.kcore);
+            kcore);
     //================================================//
     t2 = timer::get_usec();
     
 
     cout<<"\nGPU kCore finish: \n";
-    cout<<"== kcore: "<<arguments.kcore<<"\n";
+    cout<<"== kcore: "<<kcore<<"\n";
     cout<<"== remove #: "<<remove_cnt<<"\n";
-    cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
+    cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
-    output(vproplist, arguments.kcore);
+    output(vproplist, kcore);
 #endif
 
     cout<<"==================================================================\n";

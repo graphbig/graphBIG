@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include "../lib/common.h"
-#include "../lib/def.h"
+#include "common.h"
+#include "def.h"
 #include "openG.h"
 
 using namespace std;
@@ -41,41 +41,9 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
-struct arg_t
+void arg_init(argument_parser & arg)
 {
-    string dataset_path;
-    uint64_t root;
-};
-
-void arg_init(arg_t& arguments)
-{
-    arguments.dataset_path.clear();
-    arguments.root = 0;
-}
-
-void arg_parser(arg_t& arguments, vector<string>& inputarg)
-{
-    for (size_t i=1;i<inputarg.size();i++) 
-    {
-
-        if (inputarg[i]=="--dataset") 
-        {
-            i++;
-            arguments.dataset_path=inputarg[i];
-        }
-        else if (inputarg[i]=="--root")
-        {
-            i++;
-            arguments.root = atoll(inputarg[i].c_str());
-        }
-        else
-        {
-            cerr<<"wrong argument: "<<inputarg[i]<<endl;
-            return;
-        }
-    }
-    return;
+    arg.add_arg("root","0","root/starting vertex");
 }
 //==============================================================//
 
@@ -112,39 +80,43 @@ int main(int argc, char * argv[])
     graphBIG::print();
     cout<<"Benchmark: GPU SSSP\n";
 
-    arg_t arguments;
-    vector<string> inputarg;
-    argument_parser::initialize(argc,argv,inputarg);
-    arg_init(arguments);
-    arg_parser(arguments,inputarg);
+    argument_parser arg;
+    gBenchPerf_event perf;
+    arg_init(arg);
+    if (arg.parse(argc,argv,perf,false)==false)
+    {
+        arg.help();
+        return -1;
+    }
+    string path;
+    arg.get_value("dataset",path);
 
-    graph_t g;
+    size_t root;
+    arg.get_value("root",root);
+
     double t1, t2;
-    
+
     cout<<"loading data... \n";
 
-    size_t vertex_num, edge_num;
-    vector<uint64_t> vertexlist, edgelist; 
-    
     t1 = timer::get_usec();
+    size_t vertex_num, edge_num;
 #ifdef EXTERNAL_CSR
-    if (g.load_CSR_Graph(arguments.dataset_path, 
+    if (g.load_CSR_Graph(path, 
             vertex_num,edge_num,vertexlist,edgelist)==false)
     {
         cout<<"cannot open csr files"<<endl;
         return -1;
     }
 #else
-    string vfile = arguments.dataset_path + "/vertex.csv";
-    string efile = arguments.dataset_path + "/edge.csv";
+    string vfile = path + "/vertex.CSR";
+    string efile = path + "/edge.CSR";
 
-    if (g.load_csv_vertices(vfile, true, "|,", 0) == -1)
-        return -1;
-    if (g.load_csv_edges(efile, true, "|,", 0, 1) == -1) 
-        return -1;
+    vector<uint64_t> vertexlist, edgelist; 
+    
 
-    vertex_num = g.num_vertices();
-    edge_num = g.num_edges();
+    graph_t::load_CSR_Graph(vfile, efile,
+            vertex_num, edge_num,
+            vertexlist, edgelist);
 #endif    
     t2 = timer::get_usec();
 
@@ -154,14 +126,9 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
-    t1 = timer::get_usec();
+
+
     //================================================//
-    // prepare compact data for CUDA side
-    g.to_CSR_Graph(vertexlist, edgelist);
-    t2 = timer::get_usec();
-
-    cout<<"== data conversion time: "<<t2-t1<<" sec\n"<<endl;
-
     vector<uint32_t> vproplist(vertex_num, 0);
     vector<uint32_t> eproplist(edge_num, 1);
     //================================================//
@@ -172,18 +139,18 @@ int main(int argc, char * argv[])
     // call CUDA function 
     cuda_SSSP(&(vertexlist[0]), 
             &(edgelist[0]), &(vproplist[0]),&(eproplist[0]), 
-            vertexlist.size()-1, edgelist.size(), arguments.root);
+            vertexlist.size()-1, edgelist.size(), root);
     //================================================//
     t2 = timer::get_usec();
     
 
     cout<<"\nGPU SSSP finish: \n";
-    cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
+    cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 #ifdef EXTERNAL_CSR
-    string refile = arguments.dataset_path + "/result.array";
+    string refile = path + "/result.array";
     cout<<"\nResult wrote to file: "<<refile<<endl;
     writeback(refile,vproplist);
 #endif 

@@ -87,9 +87,8 @@ int main(int argc, char * argv[])
     string path;
     arg.get_value("dataset",path);
 
-    size_t root,threadnum;
+    size_t root;
     arg.get_value("root",root);
-    arg.get_value("threadnum",threadnum);
 
     double t1, t2;
 
