@@ -2,13 +2,10 @@ SUBDIR=gpu_BetweennessCentr  gpu_BFS  gpu_ConnectedComp  gpu_DegreeCentr  gpu_Gr
 
 default: all
 
-all: pfm_cxx 
+all: 
 	@for d in ${SUBDIR}; do \
           ${MAKE} -C $$d all; \
         done
-
-pfm_cxx:
-	${MAKE} -C ../tools all
 
 clean:
 	@for d in ${SUBDIR}; do \

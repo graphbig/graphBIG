@@ -8,12 +8,8 @@ OUTPUT_LOG=output.log
 
 LIBS=$(EXTRA_LIBS)
 
-ifeq (${PFM},0)
-  CXX_FLAGS += -DNO_PFM
-else
-  EXTRA_LIBS += -lpfm_cxx -lpfm
-  INCLUDE += -I${ROOT}/tools/include
-endif
+# Disable PFM for GPU workloads
+CXX_FLAGS += -DNO_PFM
 
 ifeq (${DEBUG},1)
   CXX_FLAGS += -DDEBUG -g
