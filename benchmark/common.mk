@@ -21,8 +21,9 @@ else
 endif
 
 ifeq (${HMC},1)
-  OBJS += HMC.o SIM.o
-  CXX_FLAGS += -DHMC -DSIM
+  OBJS += HMC.o
+  CXX_FLAGS += -DHMC
+  SIM=1
 endif
 
 ifeq (${SIM},1)
