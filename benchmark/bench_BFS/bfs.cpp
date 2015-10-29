@@ -15,9 +15,13 @@
 #include "SIM.h"
 #endif
 
+#ifdef HMC
+#include "HMC.h"
+#endif
+
 using namespace std;
 
-#define MY_INFINITY 0xffffff00
+#define MY_INFINITY 0xfff0
 
 class vertex_property
 {
@@ -27,7 +31,7 @@ public:
 
     uint8_t color;
     uint64_t order;
-    uint64_t level;
+    uint16_t level;
 };
 class edge_property
 {
@@ -92,7 +96,10 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi 
         vector<uint64_t> & input_tasks = global_input_tasks[tid];
       
         perf.open(tid, perf_group);
-        perf.start(tid, perf_group);  
+        perf.start(tid, perf_group); 
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif       
         while(!stop)
         {
             #pragma omp barrier
@@ -104,14 +111,19 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi 
             {
                 uint64_t vid=input_tasks[i];
                 vertex_iterator vit = g.find_vertex(vid);
-                uint32_t curr_level = vit->property().level;
+                uint16_t curr_level = vit->property().level;
                 
                 for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
                 {
                     uint64_t dest_vid = eit->target();
                     vertex_iterator destvit = g.find_vertex(dest_vid);
+#ifdef HMC                   
+                    if (HMC_CAS_equal_16B(&(destvit->property().level),
+                            MY_INFINITY,curr_level+1) == MY_INFINITY)
+#else
                     if (__sync_bool_compare_and_swap(&(destvit->property().level), 
                                 MY_INFINITY,curr_level+1))
+#endif
                     {
                         global_output_tasks[vertex_distributor(dest_vid,threadnum)+tid*threadnum].push_back(dest_vid);
                     }
@@ -133,6 +145,9 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi 
             #pragma omp barrier
 
         }
+#ifdef SIM
+        SIM_END(true);
+#endif       
         perf.stop(tid, perf_group);
     }
 

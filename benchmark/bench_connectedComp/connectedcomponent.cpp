@@ -8,23 +8,29 @@
 #include "openG.h"
 #include "omp.h"
 #include <queue>
+
 #ifdef SIM
 #include "SIM.h"
 #endif
+#ifdef HMC
+#include "HMC.h"
+#endif
+
 
 #define EDGE_MARK 1
-#define MY_INFINITY 0xffffff00
+#define MY_INFINITY 0xfff0
 
 using namespace std;
 
+uint16_t global_label=0;
 
 class vertex_property
 {
 public:
-    vertex_property():level(MY_INFINITY),label(0){}
+    vertex_property():level(MY_INFINITY),label(MY_INFINITY){}
 
-    unsigned level;
-    uint64_t label;
+    uint16_t level;
+    uint16_t label;
 };
 class edge_property
 {
@@ -62,7 +68,9 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
         
         perf.open(tid, perf_group);
         perf.start(tid, perf_group); 
-        
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif          
         while(root < g.num_vertices())
         {
             if (tid == 0)
@@ -70,7 +78,7 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
                 vertex_iterator rootvit=g.find_vertex(root);
 
                 rootvit->property().level = 0;
-                rootvit->property().label = root;
+                rootvit->property().label = global_label;
                 global_input_tasks[vertex_distributor(root, threadnum)].push_back(root);
                 stop = false;
             }
@@ -86,16 +94,24 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
                 {
                     uint64_t vid=input_tasks[i];
                     vertex_iterator vit = g.find_vertex(vid);
-                    uint32_t curr_level = vit->property().level;
+                    uint16_t curr_level = vit->property().level;
                     
                     for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
                     {
                         uint64_t dest_vid = eit->target();
                         vertex_iterator destvit = g.find_vertex(dest_vid);
+
+#ifdef HMC
+                    if (HMC_CAS_equal_16B(&(destvit->property().level),
+                                MY_INFINITY,curr_level+1) == MY_INFINITY)
+                    {
+                        HMC_CAS_equal_16B(&(destvit->property().label), MY_INFINITY, global_label);
+#else
                         if (__sync_bool_compare_and_swap(&(destvit->property().level), 
                                     MY_INFINITY,curr_level+1))
                         {
-                            destvit->property().label = root;
+                            destvit->property().label = global_label;
+#endif                            
                             global_output_tasks[vertex_distributor(dest_vid,threadnum)+tid*threadnum].push_back(dest_vid);
                         }
                     }
@@ -126,9 +142,13 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
                     vertex_iterator vit = g.find_vertex(root);
                     if (vit->property().level==MY_INFINITY) break;
                 }
+                global_label++;
             }
             #pragma omp barrier
         }
+#ifdef SIM
+        SIM_END(true);
+#endif    
         perf.stop(tid, perf_group);
     }
 

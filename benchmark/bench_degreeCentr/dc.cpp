@@ -7,11 +7,13 @@
 #include <math.h>
 #include <stack>
 #include "omp.h"
+
 #ifdef SIM
 #include "SIM.h"
 #endif
-
-
+#ifdef HMC
+#include "HMC.h"
+#endif
 
 using namespace std;
 
@@ -21,8 +23,8 @@ class vertex_property
 public:
     vertex_property():indegree(0),outdegree(0){}
 
-    uint64_t indegree;
-    uint64_t outdegree;
+    int16_t indegree;
+    int16_t outdegree;
 };
 class edge_property
 {
@@ -79,7 +81,9 @@ void parallel_dc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int pe
         unsigned start = tid*chunk;
         unsigned end = start + chunk;
         if (end > g.num_vertices()) end = g.num_vertices();
-
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif 
         for (unsigned vid=start;vid<end;vid++)
         {
             vertex_iterator vit = g.find_vertex(vid);
@@ -91,10 +95,17 @@ void parallel_dc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int pe
             for (eit=vit->edges_begin(); eit!=vit->edges_end(); eit++) 
             {
                 vertex_iterator targ = g.find_vertex(eit->target());
+#ifdef HMC
+                HMC_ADD_16B(&(targ->property().indegree),1);
+#else  
                 __sync_fetch_and_add(&(targ->property().indegree), 1);
+#endif
             }
 
         }
+#ifdef SIM
+        SIM_END(true);
+#endif  
         perf.stop(tid, perf_group);
     }
 }
@@ -109,17 +120,17 @@ void degree_analyze(graph_t& g,
 
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
-        if (indegree_max < vit->property().indegree)
-            indegree_max = vit->property().indegree;
+        if (indegree_max < (uint64_t)vit->property().indegree)
+            indegree_max = (uint64_t)vit->property().indegree;
 
-        if (outdegree_max < vit->property().outdegree)
-            outdegree_max = vit->property().outdegree;
+        if (outdegree_max < (uint64_t)vit->property().outdegree)
+            outdegree_max = (uint64_t)vit->property().outdegree;
 
-        if (indegree_min > vit->property().indegree)
-            indegree_min = vit->property().indegree;
+        if (indegree_min > (uint64_t)vit->property().indegree)
+            indegree_min = (uint64_t)vit->property().indegree;
 
-        if (outdegree_min > vit->property().outdegree)
-            outdegree_min = vit->property().outdegree;
+        if (outdegree_min > (uint64_t)vit->property().outdegree)
+            outdegree_min = (uint64_t)vit->property().outdegree;
     }
 
     return;

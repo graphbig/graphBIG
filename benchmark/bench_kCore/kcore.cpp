@@ -9,6 +9,14 @@
 #include <queue>
 #include "omp.h"
 
+#ifdef HMC
+#include "HMC.h"
+#endif
+
+#ifdef SIM
+#include "SIM.h"
+#endif
+
 using namespace std;
 
 class vertex_property
@@ -16,7 +24,7 @@ class vertex_property
 public:
     vertex_property():degree(0),removed(false){}
 
-    uint64_t degree;
+    int16_t degree;
     bool removed;
 };
 class edge_property
@@ -48,7 +56,7 @@ void seq_init(graph_t& g, size_t k, size_t & remove_cnt, queue<vertex_iterator> 
     for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
         size_t degree = vit->edges_size();
-        vit->property().degree = degree;
+        vit->property().degree = (int16_t)degree;
 
         if (degree < k) 
         {
@@ -78,7 +86,7 @@ size_t kcore(graph_t& g, size_t k, size_t remove_cnt, queue<vertex_iterator> pro
             if (targ_vit->property().removed==false)
             {
                 targ_vit->property().degree--;
-                if (targ_vit->property().degree < k) 
+                if (targ_vit->property().degree < (int16_t)k) 
                 {
                     targ_vit->property().removed = true;
                     process_q.push(targ_vit);
@@ -99,7 +107,7 @@ void parallel_init(graph_t& g, size_t k, unsigned threadnum, size_t & remove_cnt
     for (vertex_iterator vit=g.vertices_begin(); vit!=g.vertices_end(); vit++) 
     {
         size_t degree = vit->edges_size();
-        vit->property().degree = degree;
+        vit->property().degree = (int16_t)degree;
 
         if (degree < k) 
         {
@@ -122,6 +130,9 @@ size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum, size_t remove_cn
         
         perf.open(tid, perf_group);
         perf.start(tid, perf_group);  
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif    
         while(!stop)
         {
             #pragma omp barrier
@@ -141,8 +152,11 @@ size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum, size_t remove_cn
 
                     if (destvit->property().removed==false)
                     {
-                        unsigned oldval = __sync_fetch_and_sub(&(destvit->property().degree), 1);
-                        if (oldval == k)
+#ifdef HMC
+                    if (HMC_ADD_16B(&(destvit->property().degree), -1)==(int16_t)k) 
+#else
+                        if(__sync_fetch_and_sub(&(destvit->property().degree), 1)==(int16_t)k)
+#endif                        
                         {
                             destvit->property().removed=true;
                             __sync_fetch_and_add(&remove_cnt, 1);
@@ -167,6 +181,9 @@ size_t parallel_kcore(graph_t& g, size_t k, unsigned threadnum, size_t remove_cn
             #pragma omp barrier
 
         }
+#ifdef SIM
+        SIM_END(true);
+#endif
         perf.stop(tid, perf_group);
     }
 
