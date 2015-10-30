@@ -9,6 +9,7 @@ SUBDIR=bench_BFS \
 	   bench_graphUpdate \
 	   bench_graphConstruct \
 	   bench_TopoMorph \
+	   bench_pageRank \
 	   ubench_add \
 	   ubench_find \
 	   ubench_delete \
