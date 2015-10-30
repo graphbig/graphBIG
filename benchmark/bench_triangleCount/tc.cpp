@@ -11,6 +11,14 @@
 #include <vector>
 #include <algorithm>
 
+#ifdef HMC
+#include "HMC.h"
+#endif
+
+#ifdef SIM
+#include "SIM.h"
+#endif
+
 using namespace std;
 
 class vertex_property
@@ -18,7 +26,7 @@ class vertex_property
 public:
     vertex_property():count(0){}
 
-    uint64_t count;
+    int16_t count;
     std::vector<uint64_t> neighbor_set;
 };
 
@@ -224,7 +232,9 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
         
         // for test only
         //if (end > (start+1000)) end = start+1000;
-
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif
         // run triangle count now
         for (uint64_t vid=start;vid<end;vid++)
         {
@@ -239,9 +249,13 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
 
                 vector<uint64_t> & dest_set = vit_targ->property().neighbor_set;
                 size_t cnt = get_intersect_cnt(src_set, dest_set);
-
+#ifdef HMC
+                HMC_ADD_16B(&(vit->property().count),cnt);
+                HMC_ADD_16B(&(vit_targ->property().count),cnt);
+#else   
                 __sync_fetch_and_add(&(vit->property().count), cnt);
                 __sync_fetch_and_add(&(vit_targ->property().count), cnt);
+#endif
             }
         }
         #pragma omp barrier 
@@ -252,7 +266,9 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
             vit->property().count /= 2;
             __sync_fetch_and_add(&ret, vit->property().count);
         }
-
+#ifdef SIM
+        SIM_END(true);
+#endif  
         perf.stop(tid, perf_group);
     }
 

@@ -13,24 +13,33 @@
 #include <queue>
 #include "omp.h"
 
-#define MY_INFINITY 0xffffff00
+#ifdef HMC
+#include "HMC.h"
+#endif
+
+#ifdef SIM
+#include "SIM.h"
+#endif
+
+#define MY_INFINITY 0xfff0
 
 using namespace std;
 
 class vertex_property
 {
 public:
-    vertex_property():distance(MY_INFINITY),predecessor(MY_INFINITY){}
+    vertex_property():distance(MY_INFINITY),predecessor(MY_INFINITY),update(MY_INFINITY){}
 
-    uint64_t distance;
+    uint16_t distance;
     uint64_t predecessor;
+    uint16_t update;
 };
 class edge_property
 {
 public:
     edge_property():weight(1){}
 
-    uint64_t weight;
+    uint16_t weight;
 };
 
 typedef openG::extGraph<vertex_property, edge_property> graph_t;
@@ -105,9 +114,10 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
 {
     vertex_iterator rootvit=g.find_vertex(root);
     rootvit->property().distance = 0;
+    rootvit->property().update = 0; 
     
-    vector<uint32_t> update(g.num_vertices(), MY_INFINITY);
-    update[root] = 0;
+    //vector<uint16_t> update(g.num_vertices(), MY_INFINITY);
+    //update[root] = 0;
 
     bool * locks = new bool[g.num_vertices()];
     memset(locks, 0, sizeof(bool)*g.num_vertices()); 
@@ -125,7 +135,10 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
         vector<uint64_t> & input_tasks = global_input_tasks[tid];
      
         perf.open(tid, perf_group);
-        perf.start(tid, perf_group);  
+        perf.start(tid, perf_group); 
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif 
         while(!stop)
         {
             #pragma omp barrier
@@ -136,23 +149,29 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
             {
                 uint64_t vid=input_tasks[i];
                 vertex_iterator vit = g.find_vertex(vid);
-
-                uint64_t curr_dist = vit->property().distance;
+                
+                uint16_t curr_dist = vit->property().distance;
                 for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
                 {
                     uint64_t dest_vid = eit->target();
                     vertex_iterator dvit = g.find_vertex(dest_vid);
-                    uint32_t new_dist = curr_dist + eit->property().weight;
+                    uint16_t new_dist = curr_dist + eit->property().weight;
+#ifdef HMC
+                    if (HMC_CAS_greater_16B(&(dvit->property().update),new_dist) > new_dist) 
+                    {
+                        global_output_tasks[vertex_distributor(dest_vid,threadnum)+tid*threadnum].push_back(dest_vid);
+                    }
+#else
                     bool active=false;
-                    
+
                     // spinning lock for critical section
                     //  can be replaced as an atomicMin operation
                     while(__sync_lock_test_and_set(&(locks[dest_vid]),1));
-                    if (update[dest_vid]>new_dist) 
+                    if (dvit->property().update>new_dist) 
                     {
                         active = true;
-                        update[dest_vid] = new_dist;
-                        dvit->property().predecessor = vid;
+                        dvit->property().update = new_dist;
+                        //dvit->property().predecessor = vid;
                     }
                     __sync_lock_release(&(locks[dest_vid]));
                     
@@ -160,6 +179,7 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
                     {
                         global_output_tasks[vertex_distributor(dest_vid,threadnum)+tid*threadnum].push_back(dest_vid);
                     }
+#endif
                 }
             }
             #pragma omp barrier
@@ -178,10 +198,13 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
             for (unsigned i=0;i<input_tasks.size();i++) 
             {
                 vertex_iterator vit = g.find_vertex(input_tasks[i]);
-                vit->property().distance = update[input_tasks[i]];
+                vit->property().distance = vit->property().update;
             }
             #pragma omp barrier
         }
+#ifdef SIM
+        SIM_END(true);
+#endif    
         perf.stop(tid, perf_group);
     }
 

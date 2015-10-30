@@ -10,4 +10,7 @@ extern "C" uint16_t  __attribute__ ((noinline)) HMC_CAS_zero_16B(uint16_t * ptr1
 
 extern "C" int16_t  __attribute__ ((noinline)) HMC_ADD_16B(int16_t *ptr1, int16_t newdata);
 
+extern "C" float  __attribute__ ((noinline)) HMC_FP_ADD(float *ptr1, float newdata);
+
+
 #endif

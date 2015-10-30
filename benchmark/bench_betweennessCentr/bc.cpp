@@ -14,6 +14,16 @@
 #include <vector>
 #include <list>
 
+#ifdef HMC
+#include "HMC.h"
+#endif
+
+#ifdef SIM
+#include "SIM.h"
+#endif
+
+#define MY_INFINITY 0xfff0
+
 using namespace std;
 
 class vertex_property
@@ -160,10 +170,12 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
         
         // initialization
         vector<vertex_list_t> shortest_path_parents(vnum);
-        vector<size_t> num_of_paths(vnum);
-        vector<int8_t> depth_of_vertices(vnum); // 8 bits signed
-        vector<double> centrality_update(vnum);
-
+        vector<int16_t> num_of_paths(vnum);
+        vector<uint16_t> depth_of_vertices(vnum); // 16 bits signed
+        vector<float> centrality_update(vnum);
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif
         for (uint64_t vid=start;vid<end;vid++) 
         {
             size_t vertex_s = vid;
@@ -177,7 +189,7 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
                 shortest_path_parents[i].clear();
 
                 num_of_paths[i] = (i==vertex_s) ? 1 : 0;
-                depth_of_vertices[i] = (i==vertex_s) ? 0: -1;
+                depth_of_vertices[i] = (i==vertex_s) ? 0: MY_INFINITY;
                 centrality_update[i] = 0;
             }
 
@@ -189,21 +201,33 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
                 order_seen_stack.push(v);
 
                 vertex_iterator vit = g.find_vertex(v);
-
+                uint16_t newdepth = depth_of_vertices[v]+1;
                 for (edge_iterator eit=vit->edges_begin(); eit!= vit->edges_end(); eit++) 
                 {
                     size_t w = eit->target();
-                    if (depth_of_vertices[w]<0) 
+#ifdef HMC
+                    if (HMC_CAS_equal_16B(&(depth_of_vertices[w]),MY_INFINITY,newdepth) == MY_INFINITY)
                     {
                         BFS_queue.push(w);
-                        depth_of_vertices[w] = depth_of_vertices[v] + 1;
+                    }
+                    if (depth_of_vertices[w] == newdepth)
+                    {
+                        HMC_ADD_16B(&(num_of_paths[w]), num_of_paths[v]);
+                        shortest_path_parents[w].push_back(v);
+                    }
+#else                    
+                    if (depth_of_vertices[w] == MY_INFINITY) 
+                    {
+                        BFS_queue.push(w);
+                        depth_of_vertices[w] = newdepth;
                     }
 
-                    if (depth_of_vertices[w] == (depth_of_vertices[v] + 1)) 
+                    if (depth_of_vertices[w] == newdepth) 
                     {
                         num_of_paths[w] += num_of_paths[v];
                         shortest_path_parents[w].push_back(v);
                     }
+#endif
                 }
 
             }
@@ -214,14 +238,17 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
                 size_t w = order_seen_stack.top();
                 order_seen_stack.pop();
 
-                double coeff = (1+centrality_update[w])/(double)num_of_paths[w];
+                float coeff = (1+centrality_update[w])/(double)num_of_paths[w];
                 vertex_list_t::iterator iter;
                 for (iter=shortest_path_parents[w].begin(); 
                         iter!=shortest_path_parents[w].end(); iter++) 
                 {
                     size_t v=*iter;
-
+#ifdef HMC
+                    HMC_FP_ADD(&(centrality_update[v]), (num_of_paths[v]*coeff));
+#else
                     centrality_update[v] += (num_of_paths[v]*coeff);
+#endif
                 }
 
                 if (w!=vertex_s) 
@@ -232,7 +259,9 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
                 }
             }
         }
-
+#ifdef SIM
+        SIM_END(true);
+#endif
         perf.stop(tid, perf_group);
 
     }
@@ -327,7 +356,7 @@ int main(int argc, char * argv[])
         if (threadnum==1)
             bc(graph,undirected,perf,i);
         else
-            parallel_bc(graph,undirected,threadnum,perf_multi,i);
+            parallel_bc(graph,threadnum,undirected,perf_multi,i);
 
         t2 = timer::get_usec();
         elapse_time += t2-t1;
