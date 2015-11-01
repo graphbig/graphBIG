@@ -26,6 +26,8 @@
 
 using namespace std;
 
+size_t maxiter = 0;
+
 class vertex_property
 {
 public:
@@ -51,6 +53,7 @@ typedef graph_t::edge_iterator      edge_iterator;
 void arg_init(argument_parser & arg)
 {
     arg.add_arg("undirected","1","graph directness", false);
+    arg.add_arg("maxiter","0","maximum loop iteration (0-unlimited, only set for simulation purpose)");
 }
 //==============================================================//
 
@@ -166,8 +169,9 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
 
         unsigned start = tid*chunk;
         unsigned end = start + chunk;
+        if (maxiter != 0 && chunk > maxiter) end = start + maxiter;
         if (end > vnum) end = vnum;
-        
+
         // initialization
         vector<vertex_list_t> shortest_path_parents(vnum);
         vector<int16_t> num_of_paths(vnum);
@@ -308,6 +312,7 @@ int main(int argc, char * argv[])
 
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
+    arg.get_value("maxiter",maxiter);
     bool undirected;
     arg.get_value("undirected",undirected);
 
@@ -340,7 +345,8 @@ int main(int argc, char * argv[])
     cout<<"== time: "<<t2-t1<<" sec\n";
 #endif
 
-
+    if (maxiter != 0 && threadnum != 1) 
+        cout<<"\nenable maxiter: "<<maxiter<<" per thread";
     //processing
     cout<<"\ncomputing BC for all vertices...\n";
  
