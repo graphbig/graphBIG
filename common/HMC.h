@@ -12,5 +12,12 @@ extern "C" int16_t  __attribute__ ((noinline)) HMC_ADD_16B(int16_t *ptr1, int16_
 
 extern "C" float  __attribute__ ((noinline)) HMC_FP_ADD(float *ptr1, float newdata);
 
+extern "C" bool  __attribute__ ((noinline)) HMC_COMP_greater(uint16_t *ptr, uint16_t data);
+extern "C" bool  __attribute__ ((noinline)) HMC_COMP_less(uint16_t *ptr, uint16_t data);
+extern "C" bool  __attribute__ ((noinline)) HMC_COMP_equal(uint16_t *ptr, uint16_t data);
+
+
+
+
 
 #endif

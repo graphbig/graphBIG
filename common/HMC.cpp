@@ -56,3 +56,21 @@ float  __attribute__ ((noinline)) HMC_FP_ADD(float *ptr1, float newdata)
     return olddata;
 }
 
+bool  __attribute__ ((noinline)) HMC_COMP_greater(uint16_t *ptr, uint16_t newdata)
+{
+    uint16_t data = *ptr;
+    return (*ptr > newdata);
+}
+
+bool  __attribute__ ((noinline)) HMC_COMP_less(uint16_t *ptr, uint16_t newdata)
+{
+    uint16_t data = *ptr;
+    return (*ptr < newdata);
+}
+
+bool  __attribute__ ((noinline)) HMC_COMP_equal(uint16_t *ptr, uint16_t newdata)
+{
+    uint16_t data = *ptr;
+    return (*ptr == newdata);
+}
+
