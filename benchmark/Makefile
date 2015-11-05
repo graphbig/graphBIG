@@ -10,6 +10,7 @@ SUBDIR=bench_BFS \
 	   bench_graphConstruct \
 	   bench_TopoMorph \
 	   bench_pageRank \
+	   bench_graphColoring \
 	   ubench_add \
 	   ubench_find \
 	   ubench_delete \

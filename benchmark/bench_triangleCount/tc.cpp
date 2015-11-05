@@ -21,6 +21,8 @@
 
 using namespace std;
 
+size_t maxiter = 0;
+
 class vertex_property
 {
 public:
@@ -44,7 +46,10 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
+void arg_init(argument_parser & arg)
+{
+    arg.add_arg("maxiter","0","maximum loop iteration (0-unlimited, only set for simulation purpose)");
+}
 //==============================================================//
 size_t get_intersect_cnt(vector<size_t>& setA, vector<size_t>& setB)
 {
@@ -228,6 +233,8 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
         perf.start(tid, perf_group);  
         unsigned start = workset[tid];
         unsigned end = workset[tid+1];
+        if (maxiter != 0 && (start+maxiter) < end)
+            end = start + maxiter;
         if (end > g.num_vertices()) end = g.num_vertices();
         
         // for test only
@@ -304,6 +311,7 @@ int main(int argc, char * argv[])
 
     argument_parser arg;
     gBenchPerf_event perf;
+    arg_init(arg);
     if (arg.parse(argc,argv,perf,false)==false)
     {
         arg.help();
@@ -315,6 +323,7 @@ int main(int argc, char * argv[])
 
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
+    arg.get_value("maxiter",maxiter);
 
     double t1, t2;
     graph_t graph;
@@ -353,6 +362,8 @@ int main(int argc, char * argv[])
         //parallel_workset_init(graph, workset, arguments.threadnum);
         gen_workset(graph, workset, threadnum);
     }
+
+    if (maxiter != 0) cout<<"\nmax iteration: "<<maxiter;
     cout<<"\ncomputing triangle count..."<<endl;
     size_t tcount;
 
