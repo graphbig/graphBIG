@@ -22,6 +22,8 @@
 using namespace std;
 
 #define MY_INFINITY 0xfff0
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -98,14 +100,17 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi 
         perf.open(tid, perf_group);
         perf.start(tid, perf_group); 
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif       
         while(!stop)
         {
             #pragma omp barrier
             // process local queue
             stop = true;
-            
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif            
         
             for (unsigned i=0;i<input_tasks.size();i++)
             {
@@ -129,6 +134,9 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi 
                     }
                 }
             }
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif            
             #pragma omp barrier
             input_tasks.clear();
             for (unsigned i=0;i<threadnum;i++)
@@ -143,10 +151,9 @@ void parallel_bfs(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi 
                 }
             }
             #pragma omp barrier
-
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif       
         perf.stop(tid, perf_group);
     }
@@ -263,7 +270,12 @@ int main(int argc, char * argv[])
     size_t root,threadnum;
     arg.get_value("root",root);
     arg.get_value("threadnum",threadnum);
-    
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
+
+
     graph_t graph;
     double t1, t2;
 

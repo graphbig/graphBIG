@@ -22,6 +22,8 @@
 using namespace std;
 
 size_t maxiter = 0;
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -240,11 +242,15 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
         // for test only
         //if (end > (start+1000)) end = start+1000;
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif
         // run triangle count now
         for (uint64_t vid=start;vid<end;vid++)
         {
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif
             vertex_iterator vit = g.find_vertex(vid);
 
             vector<uint64_t> & src_set = vit->property().neighbor_set;
@@ -264,6 +270,9 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
                 __sync_fetch_and_add(&(vit_targ->property().count), cnt);
 #endif
             }
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif
         }
         #pragma omp barrier 
         // tune the per-vertex count
@@ -274,7 +283,7 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
             __sync_fetch_and_add(&ret, vit->property().count);
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif  
         perf.stop(tid, perf_group);
     }
@@ -324,6 +333,10 @@ int main(int argc, char * argv[])
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
     arg.get_value("maxiter",maxiter);
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
 
     double t1, t2;
     graph_t graph;

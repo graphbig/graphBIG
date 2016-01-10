@@ -23,6 +23,8 @@
 using namespace std;
 
 uint16_t global_label=0;
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -69,7 +71,7 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
         perf.open(tid, perf_group);
         perf.start(tid, perf_group); 
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif          
         while(root < g.num_vertices())
         {
@@ -88,7 +90,10 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
                 #pragma omp barrier
                 // process local queue
                 stop = true;
-                
+#ifdef SIM
+                SIM_BEGIN(iter==beginiter);
+                iter++;
+#endif              
             
                 for (unsigned i=0;i<input_tasks.size();i++)
                 {
@@ -116,6 +121,9 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
                         }
                     }
                 }
+#ifdef SIM
+                SIM_END(iter==enditer);
+#endif
                 #pragma omp barrier
                 input_tasks.clear();
                 for (unsigned i=0;i<threadnum;i++)
@@ -147,7 +155,7 @@ unsigned parallel_cc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, in
             #pragma omp barrier
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif    
         perf.stop(tid, perf_group);
     }
@@ -248,6 +256,10 @@ int main(int argc, char * argv[])
 
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
 
     double t1, t2;
     graph_t graph;

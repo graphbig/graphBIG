@@ -64,6 +64,9 @@ class argument_parser
         std::string info;
         std::string value;
         bool has_value;
+        arg_t(){}
+        arg_t(std::string _info, std::string _value, bool _has_value):
+            info(_info),value(_value),has_value(_has_value){}
     };
 public:
     argument_parser()
@@ -72,14 +75,16 @@ public:
         add_arg("separator", "|,", "separators of csv dataset files");
         add_arg("threadnum", "1", "thread number");
         add_arg("help", "0", "print help info", false);
+#ifdef SIM
+        add_arg("beginiter","0","sim begin iteration #");
+        add_arg("enditer","0","sim end iteration # (0-sim till the end)");
+#endif        
     }
 
     void add_arg(std::string name, std::string _default, std::string info, bool has_value=true)
     {
-        struct arg_t t;
-        t.info = info;
-        t.value = _default;
-        _arg[name] = t;
+        _arg[name].info = info;
+        _arg[name].value = _default;
         _arg[name].has_value = has_value;
     }
     bool parse(int argc, char* argv[], bool is_open=false)

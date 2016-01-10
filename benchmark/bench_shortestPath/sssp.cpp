@@ -24,6 +24,8 @@
 #define MY_INFINITY 0xfff0
 
 using namespace std;
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -137,14 +139,17 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
         perf.open(tid, perf_group);
         perf.start(tid, perf_group); 
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif 
         while(!stop)
         {
             #pragma omp barrier
             // process local queue
             stop = true;
-            
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif           
             for (unsigned i=0;i<input_tasks.size();i++)
             {
                 uint64_t vid=input_tasks[i];
@@ -182,6 +187,9 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
 #endif
                 }
             }
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif           
             #pragma omp barrier
             input_tasks.clear();
             for (unsigned i=0;i<threadnum;i++)
@@ -203,7 +211,7 @@ void parallel_sssp(graph_t& g, size_t root, unsigned threadnum, gBenchPerf_multi
             #pragma omp barrier
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif    
         perf.stop(tid, perf_group);
     }

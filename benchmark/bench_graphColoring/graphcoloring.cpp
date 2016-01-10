@@ -21,6 +21,8 @@ using namespace std;
 
 #define SEED 123
 #define MY_INFINITY 0xfff0
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -77,7 +79,7 @@ void parallel_graphcoloring(graph_t& g, unsigned threadnum,
         perf.open(tid, perf_group);
         perf.start(tid, perf_group);  
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif    
         while(!stop)
         {
@@ -85,7 +87,10 @@ void parallel_graphcoloring(graph_t& g, unsigned threadnum,
             // process local queue
             stop = true;
             
-        
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif       
             for (unsigned i=0;i<input_tasks.size();i++)
             {
                 uint64_t vid=input_tasks[i];
@@ -127,6 +132,9 @@ void parallel_graphcoloring(graph_t& g, unsigned threadnum,
                 else
                     global_output_tasks[vertex_distributor(vid,threadnum)+tid*threadnum].push_back(vid);
             }
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif
             #pragma omp barrier
             input_tasks.clear();
             for (unsigned i=0;i<threadnum;i++)
@@ -145,7 +153,7 @@ void parallel_graphcoloring(graph_t& g, unsigned threadnum,
 
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif
         perf.stop(tid, perf_group);
     }
@@ -194,7 +202,11 @@ int main(int argc, char * argv[])
     size_t k,threadnum;
     arg.get_value("kcore",k);
     arg.get_value("threadnum",threadnum);
-    
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif   
+
     graph_t graph;
     cout<<"loading data... \n";
 

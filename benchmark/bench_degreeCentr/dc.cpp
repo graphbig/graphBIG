@@ -16,7 +16,8 @@
 #endif
 
 using namespace std;
-
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -82,10 +83,15 @@ void parallel_dc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int pe
         unsigned end = start + chunk;
         if (end > g.num_vertices()) end = g.num_vertices();
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif 
         for (unsigned vid=start;vid<end;vid++)
         {
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif
+    
             vertex_iterator vit = g.find_vertex(vid);
             // out degree
             vit->property().outdegree = vit->edges_size();
@@ -101,10 +107,12 @@ void parallel_dc(graph_t& g, unsigned threadnum, gBenchPerf_multi & perf, int pe
                 __sync_fetch_and_add(&(targ->property().indegree), 1);
 #endif
             }
-
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif  
         perf.stop(tid, perf_group);
     }
@@ -174,6 +182,10 @@ int main(int argc, char * argv[])
 
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
 
     double t1, t2;
     graph_t graph;

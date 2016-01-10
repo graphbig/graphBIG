@@ -7,10 +7,14 @@
 #include "def.h"
 #include "perf.h"
 #include "openG.h"
-
+#include "omp.h"
+#ifdef SIM
+#include "SIM.h"
+#endif
 using namespace std;
 
 #define SEED 111
+unsigned threadnum;
 
 class vertex_property
 {
@@ -70,15 +74,29 @@ size_t input(string path, size_t num, vector<uint64_t> & q)
 
 //==============================================================//
 
-void graph_update(graph_t &g, vector<uint64_t> IDs)
+void graph_update(graph_t &g, vector<uint64_t>& IDs)
 {
-    for (size_t i=0;i<IDs.size();i++) 
+    unsigned chunk = (unsigned)ceil(IDs.size()/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
     {
-        if (g.num_vertices()==0) break;
+        unsigned tid = omp_get_thread_num();
 
-        g.delete_vertex(IDs[i]);
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > IDs.size()) end = IDs.size();
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif 
+        for (size_t i=start;i<end;i++) 
+        {
+            if (g.num_vertices()==0) break;
+
+            g.delete_vertex(IDs[i]);
+        }
+#ifdef SIM
+        SIM_END(true);
+#endif 
     }
-    
 }
 
 //==============================================================//
@@ -110,7 +128,7 @@ int main(int argc, char * argv[])
     string path, separator;
     arg.get_value("dataset",path);
     arg.get_value("separator",separator);
-
+    arg.get_value("threadnum",threadnum);
     size_t delete_num;
     arg.get_value("delete",delete_num);
 

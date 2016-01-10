@@ -11,10 +11,15 @@
 
 #include "openG_storage.h"
 //#include "openG_property.h"
-
+#ifdef SIM
+#include "SIM.h"
+#endif
 namespace openG
 {
 
+#ifdef SIM
+#define LOCKSZ 2000000
+#endif
 
 enum Directness_t
 {
@@ -277,7 +282,12 @@ public:
     typedef typename EDGE::eproperty_t eproperty_t;
 
     adjacency_list(Directness_t d=DIRECTED):_directness(d),
-        _vid_gen(0),_eid_gen(0),_vertex_num(0),_edge_num(0){}
+        _vid_gen(0),_eid_gen(0),_vertex_num(0),_edge_num(0)
+    {
+#ifdef SIM
+        memset(locks,0,sizeof(bool)*LOCKSZ);
+#endif
+    }
 
     Directness_t get_directness(void){return _directness;}
     uint64_t vertex_num(void){return _vertex_num;}
@@ -342,22 +352,40 @@ public:
             for (edge_iterator eit=viter->in_edges_begin();
                   eit!=viter->in_edges_end();eit++) 
             {
-                vertex_iterator vit2 = this->find_vertex(eit->target());
+                uint64_t targ = eit->target();
+                vertex_iterator vit2 = this->find_vertex(targ);
                 assert(vit2!=_vertices.end());
-
+#ifdef SIM
+                SIM_LOCK(&(locks[targ]));
+#endif
                 _edge_num -= vit2->delete_out_edge_v(vid);
+#ifdef SIM
+                SIM_UNLOCK(&(locks[targ]));
+#endif
             }
             // remove in_edges of destination vertices
             for (edge_iterator eit=viter->out_edges_begin();
                   eit!=viter->out_edges_end();eit++) 
             {
-                vertex_iterator vit2 = this->find_vertex(eit->target());
+                uint64_t targ = eit->target();
+                vertex_iterator vit2 = this->find_vertex(targ);
                 assert(vit2!=_vertices.end());
-
+#ifdef SIM
+                SIM_LOCK(&(locks[targ]));
+#endif
                 vit2->delete_in_edge_v(vid);
+#ifdef SIM
+                SIM_UNLOCK(&(locks[targ]));
+#endif
             }
-
-            return _vertices.erase(vid);
+#ifdef SIM
+                SIM_LOCK(&(locks[vid]));
+#endif
+            vertex_iterator ret = _vertices.erase(vid);
+#ifdef SIM
+                SIM_UNLOCK(&(locks[vid]));
+#endif
+            return ret;
         }
 
         // should not reach here
@@ -377,13 +405,32 @@ public:
             uint64_t eid;
             eproperty_t eprop;
             eid = gen_eid();
-            
+#ifdef SIM
+            SIM_LOCK(&(locks[src]));
+#endif      
             eiter = src_iter->add_out_edge(eid, dest, eprop);
+#ifdef SIM
+            SIM_UNLOCK(&(locks[src]));
+#endif
+#ifdef SIM
+            __sync_fetch_and_add(&_edge_num,1);
+#else
             _edge_num++;
+#endif
 
             eid = gen_eid();
+#ifdef SIM
+            SIM_LOCK(&(locks[dest]));
+#endif
             dest_iter->add_out_edge(eid, src, eiter->shared_property());
+#ifdef SIM
+            SIM_UNLOCK(&(locks[dest]));
+#endif
+#ifdef SIM
+            __sync_fetch_and_add(&_edge_num,1);
+#else
             _edge_num++;
+#endif
             return true;
         }
         else if (_directness == DIRECTED) 
@@ -391,9 +438,25 @@ public:
             uint64_t eid;
             eproperty_t eprop;
             eid = gen_eid();
+#ifdef SIM
+            SIM_LOCK(&(locks[src]));
+#endif
             eiter = src_iter->add_out_edge(eid, dest, eprop);
+#ifdef SIM
+            SIM_UNLOCK(&(locks[src]));
+#endif
+#ifdef SIM
+            SIM_LOCK(&(locks[dest]));
+#endif
             dest_iter->add_in_edge(eid, src, eiter->shared_property());
+#ifdef SIM
+            SIM_UNLOCK(&(locks[dest]));
+#endif
+#ifdef SIM
+            __sync_fetch_and_add(&_edge_num,1);
+#else
             _edge_num++;
+#endif
             return true;
         }
         
@@ -478,15 +541,23 @@ protected:
     // local functions
     uint64_t gen_vid(void)
     {
+#ifdef SIM
+        return __sync_fetch_and_add(&_vid_gen, 1);
+#else
         uint64_t ret = _vid_gen;
         _vid_gen++;
         return ret;
+#endif
     }
     uint64_t gen_eid(void)
     {
+#ifdef SIM
+        return __sync_fetch_and_add(&_eid_gen, 1);
+#else
         uint64_t ret = _eid_gen;
         _eid_gen++;
         return ret;
+#endif
     }
 protected:
     // local variables
@@ -498,6 +569,9 @@ protected:
 
     uint64_t _vertex_num;
     uint64_t _edge_num;
+#ifdef SIM
+    bool locks[LOCKSZ];
+#endif
 };
 
 

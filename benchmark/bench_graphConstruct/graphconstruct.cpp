@@ -7,10 +7,14 @@
 #include "def.h"
 #include "perf.h"
 #include "openG.h"
-
+#include "omp.h"
+#ifdef SIM
+#include "SIM.h"
+#endif
 using namespace std;
 
 #define SEED 111
+unsigned threadnum;
 
 class vertex_property
 {
@@ -43,24 +47,72 @@ void arg_init(argument_parser & arg)
 
 void randomgraph_construction(graph_t &g, size_t vertex_num, size_t edge_num, gBenchPerf_event & perf, int perf_group)
 {
+    vector<pair<size_t,size_t> > edges;
+    for (size_t i=0;i<edge_num;i++) 
+    {
+        edges.push_back(make_pair(rand()%vertex_num, rand()%vertex_num));
+    }
     perf.open(perf_group);
     perf.start(perf_group);
-
     for (size_t i=0;i<vertex_num;i++) 
     {
         vertex_iterator vit = g.add_vertex();
         vit->set_property(vertex_property(i));
     }
+#ifdef SIM
+    SIM_BEGIN(true);
+#endif 
     for (size_t i=0;i<edge_num;i++) 
     {
         edge_iterator eit;
-        if (g.add_edge(rand()%vertex_num, rand()%vertex_num, eit))
-            eit->set_property(edge_property(i));
+        g.add_edge(edges[i].first, edges[i].second, eit);
+#ifndef SIM
+        eit->set_property(edge_property(i));
+#endif
     }
+#ifdef SIM
+    SIM_END(true);
+#endif 
     perf.stop(perf_group);
 }
 
+void parallel_randomgraph_construction(graph_t &g, size_t vertex_num, size_t edge_num)
+{
+    vector<pair<size_t,size_t> > edges;
+    for (size_t i=0;i<edge_num;i++) 
+    {
+        edges.push_back(make_pair(rand()%vertex_num, rand()%vertex_num));
+    }
+    for (size_t i=0;i<vertex_num;i++) 
+    {
+        vertex_iterator vit = g.add_vertex();
+        vit->set_property(vertex_property(i));
+    }
+    uint64_t chunk = (unsigned)ceil(edge_num/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+       
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > edge_num) end = edge_num;
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif 
+        for (size_t i=start;i<end;i++) 
+        {
+            edge_iterator eit;
+            g.add_edge(edges[i].first, edges[i].second, eit);
+#ifndef SIM
+            eit->set_property(edge_property(i));
+#endif
+        }
+#ifdef SIM
+        SIM_END(true);
+#endif 
 
+    }
+}
 
 //==============================================================//
 
@@ -92,7 +144,9 @@ int main(int argc, char * argv[])
     size_t vertex_num,edge_num;
     arg.get_value("vertex",vertex_num);
     arg.get_value("edge",edge_num);
-
+    
+    arg.get_value("threadnum",threadnum);
+    
     double t1, t2;
     
     cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
@@ -107,8 +161,10 @@ int main(int argc, char * argv[])
 
         t1 = timer::get_usec();
         graph_t g;
-        randomgraph_construction(g, vertex_num, edge_num, perf, i);
-
+        if (threadnum==1)
+            randomgraph_construction(g, vertex_num, edge_num, perf, i);
+        else
+            parallel_randomgraph_construction(g, vertex_num, edge_num);
         t2 = timer::get_usec();
         elapse_time += t2-t1;
     }

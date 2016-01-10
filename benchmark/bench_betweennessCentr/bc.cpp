@@ -27,6 +27,8 @@
 using namespace std;
 
 size_t maxiter = 0;
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -178,10 +180,14 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
         vector<uint16_t> depth_of_vertices(vnum); // 16 bits signed
         vector<float> centrality_update(vnum);
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif
         for (uint64_t vid=start;vid<end;vid++) 
         {
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif
             size_t vertex_s = vid;
             stack<size_t> order_seen_stack;
             queue<size_t> BFS_queue;
@@ -262,9 +268,12 @@ void parallel_bc(graph_t& g, unsigned threadnum, bool undirected,
                     vit->property().BC += centrality_update[w]/normalizer;
                 }
             }
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif
         perf.stop(tid, perf_group);
 
@@ -313,6 +322,11 @@ int main(int argc, char * argv[])
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
     arg.get_value("maxiter",maxiter);
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
+
     bool undirected;
     arg.get_value("undirected",undirected);
 

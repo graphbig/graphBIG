@@ -18,6 +18,8 @@
 using namespace std;
 
 unsigned itercnt = 0;
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
@@ -97,7 +99,7 @@ void parallel_pagerank(graph_t& g,
         unsigned end = start + chunk;
         if (end > g.num_vertices()) end = g.num_vertices();
 #ifdef SIM
-        SIM_BEGIN(true);
+        unsigned iter = 0;
 #endif 
         while(stop == false)
         {
@@ -111,6 +113,10 @@ void parallel_pagerank(graph_t& g,
                 vit->property().pr = random_weight;
             }
             #pragma omp barrier
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif
             // Push own pr to neighbour vertices
             //  can also be changed to pull based model
             //      pull based model can avoid atomic inst, 
@@ -131,7 +137,9 @@ void parallel_pagerank(graph_t& g,
 #endif
                 }
             }
-
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif
             // check stop condition
             #pragma omp barrier
             e_vec[tid] = 0;
@@ -159,7 +167,7 @@ void parallel_pagerank(graph_t& g,
             #pragma omp barrier
         }
 #ifdef SIM
-        SIM_END(true);
+        SIM_END(enditer==0);
 #endif  
         perf.stop(tid, perf_group);
     }
@@ -195,6 +203,10 @@ int main(int argc, char * argv[])
     size_t threadnum, maxiter;
     arg.get_value("threadnum",threadnum);
     arg.get_value("maxiter",maxiter);
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
 
     double damp, quad;
     arg.get_value("damp",damp);
