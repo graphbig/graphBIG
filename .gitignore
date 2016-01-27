@@ -26,6 +26,8 @@ benchmark/bench_graphUpdate/graphupdate
 benchmark/bench_graphConstruct/graphconstruct
 benchmark/bench_TopoMorph/topomorph
 benchmark/bench_gibbsInference/bayes_net
+benchmark/bench_graphColoring/graphcoloring
+benchmark/bench_pageRank/pagerank
 
 benchmark/ubench_add/ubench_add
 benchmark/ubench_delete/ubench_delete
