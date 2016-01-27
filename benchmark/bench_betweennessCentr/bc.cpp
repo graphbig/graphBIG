@@ -345,10 +345,15 @@ int main(int argc, char * argv[])
     string vfile = path + "/vertex.csv";
     string efile = path + "/edge.csv";
 
+#ifndef EDGES_ONLY
     if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
     if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1)
+        return -1;
+#endif
 
     size_t vertex_num = graph.num_vertices();
     size_t edge_num = graph.num_edges();

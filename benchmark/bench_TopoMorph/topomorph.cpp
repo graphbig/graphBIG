@@ -179,12 +179,13 @@ int main(int argc, char * argv[])
     string vfile = path + "/vertex.csv";
     string efile = path + "/edge.csv";
 
+#ifndef EDGES_ONLY
     if (dag.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
+#endif
     // turn on dag_check for edge loading
     if (dag.load_csv_edges(efile, true, separator, 0, 1, true) == -1) 
         return -1;
-
 
     size_t vertex_num = dag.num_vertices();
     size_t edge_num = dag.num_edges();

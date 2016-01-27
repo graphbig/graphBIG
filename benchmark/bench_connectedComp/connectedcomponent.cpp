@@ -275,7 +275,7 @@ int main(int argc, char * argv[])
     if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
 #else
-    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1)
         return -1;
 #endif
     
