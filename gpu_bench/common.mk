@@ -11,6 +11,10 @@ LIBS=$(EXTRA_LIBS)
 # Disable PFM for GPU workloads
 CXX_FLAGS += -DNO_PFM
 
+ifeq (${GPUARCH},1)
+  NVCC += -arch sm_20
+endif
+
 ifeq (${DEBUG},1)
   CXX_FLAGS += -DDEBUG -g
 else
