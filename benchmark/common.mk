@@ -2,10 +2,7 @@ CXX_FLAGS+=-std=c++0x -Wall -Wno-deprecated
 INCLUDE+=-I${ROOT}/common -I${ROOT}/openG
 EXTRA_CXX_FLAGS+=-L${ROOT}/tools/lib
 
-OUTPUT_LOG=output.log
-
-LIBS=$(EXTRA_LIBS)
-
+LIBS=${EXTRA_LIBS}
 
 ifeq (${PFM},0)
   CXX_FLAGS += -DNO_PFM
@@ -95,17 +92,6 @@ HMC.o:
 SIM.o:
 	${CXX} -c ${ROOT}/common/SIM.cpp
 
-reset_generated_dir:
-	@if [ -n "${GENERATED_DIRS}" ]; then \
-          rm -rf ${GENERATED_DIRS}; \
-          mkdir ${GENERATED_DIRS};  \
-        fi
 
-run: ${TARGET} reset_generated_dir
-	@if [ -n "${TARGET}" ]; then \
-          echo "Running ${TARGET}, output in ${OUTPUT_LOG}"; \
-          ./${TARGET} ${RUN_ARGS} ${PERF_ARGS} > ${OUTPUT_LOG} 2>&1; \
-	fi
+include ${ROOT}/common.mk
 
-clean:
-	@-/bin/rm -rf ${ALL_TARGETS} ${GENERATED_DIRS} *.o *~ core core.* ${OUTPUT_LOG}

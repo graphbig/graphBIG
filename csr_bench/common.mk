@@ -93,17 +93,5 @@ HMC.o:
 SIM.o:
 	${CXX} -c ${ROOT}/common/SIM.cpp
 
-reset_generated_dir:
-	@if [ -n "${GENERATED_DIRS}" ]; then \
-          rm -rf ${GENERATED_DIRS}; \
-          mkdir ${GENERATED_DIRS};  \
-        fi
+include ${ROOT}/common.mk
 
-run: ${TARGET} reset_generated_dir
-	@if [ -n "${TARGET}" ]; then \
-          echo "Running ${TARGET}, output in ${OUTPUT_LOG}"; \
-          ./${TARGET} ${RUN_ARGS} > ${OUTPUT_LOG} 2>&1; \
-	fi
-
-clean:
-	@-/bin/rm -rf ${ALL_TARGETS} ${GENERATED_DIRS} *.o *~ core core.* ${OUTPUT_LOG}

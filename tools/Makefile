@@ -4,16 +4,18 @@ CXX_FLAGS=-I./include -L./lib -O3
 LIBS=-lpfm_cxx -lpfm
 
 
-all: libpfm.a libpfm_cxx.a
+all: lib/libpfm.a lib/libpfm_cxx.a
 
-libpfm.a: ${PFMDIR}
-	(cd ${PFMDIR}; make -j 4; cp lib/libpfm.a ../lib/; cp -r include/perfmon ../include/)
+lib/libpfm.a: ${PFMDIR}
+	${MAKE} -C ${PFMDIR} -j 4
+	cp ${PFMDIR}/lib/libpfm.a lib/
+	cp -r ${PFMDIR}/include/perfmon include/
 
 ${PFMDIR}:
 	rm -rf ${PFMDIR}
 	tar xzvf ${PFMDIR}.tar.gz
 
-libpfm_cxx.a: 
+lib/libpfm_cxx.a: 
 	make -C pfm_cxx all 
 
 test:

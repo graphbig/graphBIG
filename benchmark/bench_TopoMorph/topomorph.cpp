@@ -141,13 +141,13 @@ void parallel_moralize(graph_t & dag, graph_t & ug)
 
 void output(graph_t& ug, std::string path)
 {
-    cout<<"Writing back ugraph...\n";
+    cout<<"ugraph results...\n";
     vertex_iterator vit;
     for (vit=ug.vertices_begin(); vit!=ug.vertices_end(); vit++)
     {
-        cout<<"== "<<vit->id()<<": ";
-        for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
-            cout<<eit->target()<<" ";
+        cout<<"== vertex "<<vit->id()<<": edge#-"<<vit->edges_size();
+        //for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
+        //    cout<<eit->target()<<" ";
         cout<<"\n";
     }
 }
@@ -227,7 +227,7 @@ int main(int argc, char * argv[])
 
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
-    output(*ug, arguments.dataset_path);
+    output(*ug, path);
 #endif
     if (ug) delete ug;
     cout<<"==================================================================\n";

@@ -167,17 +167,16 @@ int main(int argc, char * argv[])
             parallel_randomgraph_construction(g, vertex_num, edge_num);
         t2 = timer::get_usec();
         elapse_time += t2-t1;
+#ifdef ENABLE_OUTPUT
+        cout<<"\n";
+        if (i==(run_num-1)) output(g);
+#endif
     }
     cout<<"\nconstruction finish \n";
 
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<elapse_time/run_num<<" sec\n";
     perf.print();
-#endif
-
-#ifdef ENABLE_OUTPUT
-    cout<<"\n";
-    output(g);
 #endif
 
     cout<<"==================================================================\n";

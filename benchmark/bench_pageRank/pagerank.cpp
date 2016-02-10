@@ -6,6 +6,7 @@
 #include "openG.h"
 #include <math.h>
 #include <stack>
+#include <iomanip>
 #include "omp.h"
 
 #ifdef SIM
@@ -178,7 +179,8 @@ void output(graph_t& g)
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
-        cout<<"== vertex "<<vit->id()<<": "<<vit->property().pr<<"\n";
+        cout<<"== vertex "<<vit->id()<<": "<<setprecision(4)
+            <<vit->property().pr<<"\n";
     }
 }
 

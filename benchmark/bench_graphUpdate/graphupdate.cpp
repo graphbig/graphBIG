@@ -135,12 +135,12 @@ int main(int argc, char * argv[])
     unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
 
+    double t1, t2;
     for (unsigned i=0;i<run_num;i++)
     {
         cout<<"\nRun #"<<i<<endl;
         srand(SEED); // fix seed to avoid runtime dynamics
         graph_t g;
-        double t1, t2;
         
         cout<<"loading data... \n";
 
@@ -188,14 +188,17 @@ int main(int argc, char * argv[])
 
 #ifndef ENABLE_VERIFY
         cout<<"== time: "<<t2-t1<<" sec\n";
+#else
+        (void)t1;
+        (void)t2;
+#endif
+#ifdef ENABLE_OUTPUT
+        cout<<"\n";
+        if (i==(run_num-1)) output(g);
 #endif
     }
 #ifndef ENABLE_VERIFY
     perf.print();
-#endif
-#ifdef ENABLE_OUTPUT
-    cout<<"\n";
-    output(g);
 #endif
 
     cout<<"==================================================================\n";

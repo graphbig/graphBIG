@@ -51,7 +51,13 @@ void seq_BFS(
     vertex_queue.push(root);
     
     t2 = timer::get_usec();
+
+#ifndef ENABLE_VERIFY
     cout<<"== initialization time: "<<t2-t1<<" sec\n";
+#else
+    (void)t1;
+    (void)t2;
+#endif
 
     t1 = timer::get_usec();
 #ifdef SIM
@@ -88,7 +94,9 @@ void seq_BFS(
 #endif
 
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== traversal time: "<<t2-t1<<" sec\n";
+#endif
 }
 
 struct arg_t
@@ -200,8 +208,12 @@ void parallel_BFS(
     
     vector<vector<uint64_t> > global_output_tasks(threadnum*threadnum);
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== initialization time: "<<t2-t1<<" sec\n";
-
+#else
+    (void)t1;
+    (void)t2;
+#endif
     t1 = timer::get_usec();
     
     bool stop = false;
@@ -313,6 +325,8 @@ void parallel_BFS(
     }
 #endif
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== traversal time: "<<t2-t1<<" sec\n";
+#endif
 }
 

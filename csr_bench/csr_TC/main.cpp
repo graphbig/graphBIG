@@ -135,6 +135,9 @@ int main(int argc, char * argv[])
     
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
+#else
+    (void)t1;
+    (void)t2;
 #endif
 
     //================================================//
@@ -143,7 +146,9 @@ int main(int argc, char * argv[])
     t1 = timer::get_usec();
     init(vertexlist,edgelist,threadnum);
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== data preprocessing time: "<<t2-t1<<" sec\n"<<endl;
+#endif
 
     unsigned tcount;
     t1 = timer::get_usec();

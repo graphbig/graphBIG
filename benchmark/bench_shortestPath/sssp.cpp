@@ -244,6 +244,7 @@ void reset_graph(graph_t & g)
     {
         vit->property().predecessor = MY_INFINITY;
         vit->property().distance = MY_INFINITY;
+        vit->property().update = MY_INFINITY;
     }
 
 }
