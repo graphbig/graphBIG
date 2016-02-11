@@ -1,0 +1,9 @@
+sudo: false
+language: cpp
+compiler: 
+    - g++
+before_script: ls
+script: 
+    - make travis-verify
+
+

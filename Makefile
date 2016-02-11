@@ -4,5 +4,8 @@ SUBDIR=benchmark \
 
 ROOT=./
 
+TRAVIS_DIR=benchmark \
+		   csr_bench
+
 include ${ROOT}/gen.mk
 

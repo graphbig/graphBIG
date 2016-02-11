@@ -41,6 +41,9 @@ verify: pfm_cxx ${TESTDIRS}
 ${TESTDIRS}:
 	@${MAKE} -s -C $(@:test-%=%) verify
 
+travis-verify: pfm_cxx ${TRAVIS_DIR:%=test-%}
+
+
 
 help: ${HELPDIRS}
 
