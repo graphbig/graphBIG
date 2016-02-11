@@ -30,11 +30,12 @@ run: ${TARGET} reset_generated_dir
 	fi
 
 verify: 
+	@echo "VERIFY-run [${TARGET}]"
 	@-make clean;
-	@echo "ReCompile..."
+	@echo "ReCompile with options: OUTPUT=1 VERIFY=1";
 	@-make OUTPUT=1 VERIFY=1 all;
-	@echo "Running..."
-	@-make run;
+	@echo "Running...";
+	@./${TARGET} ${RUN_ARGS}  > ${OUTPUT_LOG} 2>&1;
 	@${ROOT}/scripts/compare.sh ${OUTPUT_LOG} ${EXPECTED_LOG} ${DIFF_LOG}
 
 clean:

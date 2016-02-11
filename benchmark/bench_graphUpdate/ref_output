@@ -8,17 +8,8 @@
                                                                  
 ==================================================================
 Benchmark: Graph update
-
-Run #0
-loading data... 
 == 1000 vertices  29790 edges
-graph update finish: 
-== 905 vertices  26753 edges
 
-
-Run #1
-loading data... 
-== 1000 vertices  29790 edges
 graph update finish: 
 == 905 vertices  26753 edges
 

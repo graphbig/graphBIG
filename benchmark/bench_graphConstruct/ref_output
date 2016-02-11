@@ -10,7 +10,6 @@
 Benchmark: graph construction
 == 1000 vertices  10000 edges
 
-
 BFS Results: 
 == vertex 0: edge#-7
 == vertex 1: edge#-10

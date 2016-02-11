@@ -204,6 +204,10 @@ int main(int argc, char * argv[])
     
     for (unsigned i=0;i<run_num;i++)
     {
+        vis.white_access=0;
+        vis.grey_access=0;
+        vis.black_access=0;
+
         t1 = timer::get_usec();
 
         dfs(graph, root, vis, perf, i);

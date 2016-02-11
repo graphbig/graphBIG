@@ -118,7 +118,7 @@ void parallel_randomgraph_construction(graph_t &g, size_t vertex_num, size_t edg
 
 void output(graph_t& g)
 {
-    cout<<"BFS Results: \n";
+    cout<<"\nBFS Results: \n";
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
@@ -168,7 +168,6 @@ int main(int argc, char * argv[])
         t2 = timer::get_usec();
         elapse_time += t2-t1;
 #ifdef ENABLE_OUTPUT
-        cout<<"\n";
         if (i==(run_num-1)) output(g);
 #endif
     }

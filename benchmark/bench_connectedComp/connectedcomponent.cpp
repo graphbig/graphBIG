@@ -231,7 +231,7 @@ void reset_graph(graph_t & g)
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
-        vit->property().label = 0;
+        vit->property().label = MY_INFINITY;
         vit->property().level = MY_INFINITY;
     }
 
@@ -297,6 +297,7 @@ int main(int argc, char * argv[])
 
     for (unsigned i=0;i<run_num;i++)
     {
+        global_label=0;
         t1 = timer::get_usec();
 
         if (threadnum == 1)

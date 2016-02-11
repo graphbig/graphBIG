@@ -103,7 +103,7 @@ void graph_update(graph_t &g, vector<uint64_t>& IDs)
 
 void output(graph_t& g)
 {
-    cout<<"Results: \n";
+    cout<<"\nResults: \n";
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
@@ -138,12 +138,13 @@ int main(int argc, char * argv[])
     double t1, t2;
     for (unsigned i=0;i<run_num;i++)
     {
+#ifndef ENABLE_VERIFY
         cout<<"\nRun #"<<i<<endl;
+        cout<<"loading data... \n";
+#endif
         srand(SEED); // fix seed to avoid runtime dynamics
         graph_t g;
         
-        cout<<"loading data... \n";
-
         t1 = timer::get_usec();
         string vfile = path + "/vertex.csv";
         string efile = path + "/edge.csv";
@@ -157,12 +158,10 @@ int main(int argc, char * argv[])
         if (g.load_csv_edges(path, true, separator, 0, 1) == -1)
             return -1;
 #endif
-        size_t vertex_num = g.num_vertices();
-        size_t edge_num = g.num_edges();
         t2 = timer::get_usec();
 
-        cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
-        
+        if (i==0)
+            cout<<"== "<<g.num_vertices()<<" vertices  "<<g.edge_num()<<" edges\n\n";
 #ifndef ENABLE_VERIFY
         cout<<"== time: "<<t2-t1<<" sec\n\n";
 #endif
@@ -183,9 +182,11 @@ int main(int argc, char * argv[])
 
         perf.stop(i);
         t2 = timer::get_usec();
-        cout<<"graph update finish: \n";
-        cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
-
+        if (i==(run_num-1))
+        {
+            cout<<"graph update finish: \n";
+            cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
+        }
 #ifndef ENABLE_VERIFY
         cout<<"== time: "<<t2-t1<<" sec\n";
 #else
@@ -193,7 +194,6 @@ int main(int argc, char * argv[])
         (void)t2;
 #endif
 #ifdef ENABLE_OUTPUT
-        cout<<"\n";
         if (i==(run_num-1)) output(g);
 #endif
     }
