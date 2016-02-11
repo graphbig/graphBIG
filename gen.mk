@@ -15,7 +15,7 @@ all: pfm_cxx ${BUILDDIRS}
 ${BUILDDIRS}:
 	@${MAKE} -C $(@:build-%=%) all
 
-pfm_cxx: ${ROOT}/tools/lib/libpfm.a ${ROOT}/tools/lib/libpfm_cxx.a
+pfm_cxx: 
 	@${MAKE} --no-print-directory -C ${ROOT}/tools all
 
 clean: ${CLEANDIRS}
