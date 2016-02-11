@@ -2,10 +2,11 @@ sudo: false
 language: cpp
 compiler: 
     - g++
+env:
+    global:
+        - OMP_NUM_THREADS=4
+
 before_script: ls
 script: 
     - make travis-verify
-after_failture:
-    - echo benchmark/output.log
-    - echo csr_bench/output.log
 
