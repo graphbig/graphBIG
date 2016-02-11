@@ -12,7 +12,7 @@ LIBS=$(EXTRA_LIBS)
 CXX_FLAGS += -DNO_PFM
 
 ifeq (${OCELOT},1)
-  NVCC += -arch sm_20
+  NVCC_FLAGS += -arch sm_20
   LIBS += -locelot
 endif
 
@@ -28,6 +28,7 @@ endif
 
 ifeq (${VERIFY},1)
   CXX_FLAGS += -DENABLE_VERIFY
+  NVCC_FLAGS += -DENABLE_VERIFY
 endif
 
 ifeq (${STRUCTURE}, LL)
@@ -50,6 +51,7 @@ EXTRA_CXX_FLAGS+=${TRAITS}
 
 ifeq (${OUTPUT}, 1)
   EXTRA_CXX_FLAGS+=-DENABLE_OUTPUT
+  NVCC_FLAGS += -DENABLE_OUTPUT
 endif
 
 CXX_FLAGS+=$(EXTRA_CXX_FLAGS) $(INCLUDE)
@@ -58,7 +60,12 @@ ALL_TARGETS=${TARGET} ${UNIT_TEST_TARGETS} ${EXTRA_TARGETS}
 
 NVCC_LINK_OPTIONS+=$(EXTRA_CXX_FLAGS) $(INCLUDE)
 
+NVCC_FLAGS+=-I${ROOT}/gpu_bench/cudalib
+
 all: ${ALL_TARGETS}
+
+%.o: %.cu
+	${NVCC} -c ${NVCC_FLAGS} $<
 
 .cc.o:
 	${CXX} -c ${CXX_FLAGS} $<
@@ -66,23 +73,12 @@ all: ${ALL_TARGETS}
 .cpp.o:
 	${CXX} -c ${CXX_FLAGS} $<
 
+
 ${TARGET}: ${OBJS}
 	${NVCC} ${NVCC_LINK_OPTIONS} ${OBJS} -o $@ ${LIBS}
 
 ${UNIT_TEST_TARGETS}:
 	${CXX} ${CXX_FLAGS} ${LIBS} -o $@ $@.cc $(LIBS)
-
-reset_generated_dir:
-	@if [ -n "${GENERATED_DIRS}" ]; then \
-          rm -rf ${GENERATED_DIRS}; \
-          mkdir ${GENERATED_DIRS};  \
-        fi
-
-run: ${TARGET} reset_generated_dir
-	@if [ -n "${TARGET}" ]; then \
-          echo "Running ${TARGET}, output in ${OUTPUT_LOG}"; \
-          ./${TARGET} ${RUN_ARGS} > ${OUTPUT_LOG} 2>&1; \
-	fi
 
 CUB:
 	@if [ -e "${ROOT}/cub" ]; then \
@@ -93,5 +89,6 @@ CUB:
 		echo "Linking with external CUB library"; \
 	fi
 
-clean:
-	@-/bin/rm -rf ${ALL_TARGETS} ${GENERATED_DIRS} *.o *~ core core.* ${OUTPUT_LOG}
+
+include ${ROOT}/common.mk
+

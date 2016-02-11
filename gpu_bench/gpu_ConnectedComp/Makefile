@@ -5,7 +5,4 @@ RUN_ARGS=--dataset $(ROOT)/dataset/small
 
 include ../common.mk
 
-connected_comp.o: connected_comp.cu
-	${NVCC} -c -I../cudalib $<
-
 

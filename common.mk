@@ -31,7 +31,9 @@ run: ${TARGET} reset_generated_dir
 
 verify: 
 	@-make clean;
+	@echo "ReCompile..."
 	@-make OUTPUT=1 VERIFY=1 all;
+	@echo "Running..."
 	@-make run;
 	@${ROOT}/scripts/compare.sh ${OUTPUT_LOG} ${EXPECTED_LOG} ${DIFF_LOG}
 
