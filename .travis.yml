@@ -5,5 +5,7 @@ compiler:
 before_script: ls
 script: 
     - make travis-verify
-
+after_failture:
+    - echo benchmark/output.log
+    - echo csr_bench/output.log
 
