@@ -8,7 +8,7 @@
 </pre>
 
 # GraphBIG
-GraphBIG is a graph benchmarking effort initiated by Georgia Tech __HPArch__ and IBM __System G__. By supporting a wide selection of workloads from both __CPU__ and __GPU__ sides,
+GraphBIG is a graph benchmarking effort initiated by Georgia Tech __HPArch__ and inspired by IBM __System G__. By supporting a wide selection of workloads from both __CPU__ and __GPU__ sides,
 GraphBIG covers the broad spectrum of graph computing and fulfills multiple major requirements, including _framework_, _representativeness_, _coverage_, and graph _data support_.
 
 
@@ -21,7 +21,7 @@ use cases and summarized graph computing features by computation types and graph
 GraphBIG workloads then cover all major computation types and data sources. 
 
 GraphBIG benchmarks were built on an open source graph framework
-named "openG", which follows the same design methodology as IBM System G framework.
+named "openG", which follows the similar design methodology as IBM System G framework.
 It represents architectural/system behaviors of real-world graph computing practices.
 
 (For commercial packages of the IBM System G, please visit [IBM System G])
@@ -43,10 +43,8 @@ Lifeng Nai, Yinglong Xia, Ilie G. Tanase, Hyesoon Kim, and Ching-Yung Lin. [Grap
 ### Tutorial
 [The World is Big and Linked: Whole Spectrum Industry Solutions towards Big Graphs](http://cci.drexel.edu/bigdata/bigdata2015/tutorials.html), _IEEE BigData 2015, Oct. 2015_
 
-### Upcoming
-v3.0-beta is released. It includes a redesigned argument interface, multiple issue fixes, and a set of new benchmarks for architectural simulation purposes. We're still working on its testing and expecting to release a stable v3.0 soon. Since v3.0 is still at beta stage, issues may exist. Please feel to free to contact us if you notice an issue. 
-
-GraphBIG-Doc, a separate repository for documents, is under contruction and will be ready soon.
+### Updates
+v3.2 is released. It includes a few new workloads, multiple issue fixes, simulation annotations, and a new compile/test structure. Please feel to free to contact us if you notice an issue. 
 
 ### Compile/Run
 
@@ -74,7 +72,7 @@ $ cat output.log
 
 ### Documents
 
-Documents can be found in the [GraphBIG-Doc](https://github.com/graphbig/GraphBIG-Doc) repository under the same graphbig organization. 
+Documents can be found in the [GraphBIG-Doc](https://github.com/graphbig/GraphBIG-Doc) repository in the same graphbig organization. 
 
 ### Datasets
 To cover the diverse features of graph data, GraphBIG present two types of graph data sets, real-world data and synthetic data. The real-world data sets can illustrate real graph data features, while the synthetic data can help workload characterizations because of its flexible data size.
@@ -100,7 +98,7 @@ feel free to contact us.
 BSD license
 
 ### Version
-3.0-beta
+3.2
 
 ### Contact us
 Lifeng Nai (lnai3 _at_ gatech.edu / nailifeng _at_ gmail.com)
