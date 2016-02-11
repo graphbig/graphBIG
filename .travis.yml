@@ -8,5 +8,7 @@ env:
 
 before_script: ls
 script: 
+    - make -C benchmark all
+    - make -C csr_bench all
     - make travis-verify
 
