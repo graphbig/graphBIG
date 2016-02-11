@@ -202,11 +202,11 @@ unsigned cuda_triangle_count(uint64_t * vertexlist,
     cudaEventRecord(stop_event, 0);
     cudaEventSynchronize(stop_event);
     cudaEventElapsedTime(&d2h_copy_time, start_event, stop_event);
-
+#ifndef ENABLE_VERIFY
     printf("== host->device copy time: %f ms\n", h2d_copy_time);
     printf("== device->host copy time: %f ms\n", d2h_copy_time);
     printf("== kernel time: %f ms\n", kernel_time);
-
+#endif
     cudaEventDestroy(start_event);
     cudaEventDestroy(stop_event);
 

@@ -124,10 +124,15 @@ int main(int argc, char * argv[])
     string vfile = path + "/vertex.csv";
     string efile = path + "/edge.csv";
 
+#ifndef EDGES_ONLY
     if (g.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
     if (g.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (g.load_csv_edges(efile, true, separator, 0, 1) == -1)
+        return -1;
+#endif
 
     size_t vertex_num = g.num_vertices();
     size_t edge_num = g.num_edges();
@@ -161,6 +166,9 @@ int main(int argc, char * argv[])
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
     perf.print();
+#else
+    (void)t1;
+    (void)t2;
 #endif
 
 #ifdef ENABLE_OUTPUT

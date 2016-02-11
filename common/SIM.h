@@ -6,4 +6,6 @@
 extern "C" unsigned __attribute__ ((noinline)) SIM_BEGIN(bool i);
 extern "C" unsigned __attribute__ ((noinline)) SIM_END(bool i); 
 
+extern "C" void __attribute__ ((noinline)) SIM_LOCK(bool * i);
+extern "C" void __attribute__ ((noinline)) SIM_UNLOCK(bool * i);
 #endif

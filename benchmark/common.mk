@@ -2,10 +2,7 @@ CXX_FLAGS+=-std=c++0x -Wall -Wno-deprecated
 INCLUDE+=-I${ROOT}/common -I${ROOT}/openG
 EXTRA_CXX_FLAGS+=-L${ROOT}/tools/lib
 
-OUTPUT_LOG=output.log
-
-LIBS=$(EXTRA_LIBS)
-
+LIBS=${EXTRA_LIBS}
 
 ifeq (${PFM},0)
   CXX_FLAGS += -DNO_PFM
@@ -15,14 +12,21 @@ else
 endif
 
 ifeq (${DEBUG},1)
-  CXX_FLAGS += -DDEBUG -g
+  CXX_FLAGS += -DDEBUG -g -O0
 else
   CXX_FLAGS +=-O3
 endif
 
+ifeq (${OMP},0)
+# do nothing
+else
+	CXX_FLAGS += -DUSE_OMP
+endif
+
 ifeq (${HMC},1)
-  OBJS += HMC.o SIM.o
-  CXX_FLAGS += -DHMC -DSIM
+  OBJS += HMC.o
+  CXX_FLAGS += -DHMC
+  SIM=1
 endif
 
 ifeq (${SIM},1)
@@ -54,6 +58,10 @@ ifeq (${STRUCTURE}, VV)
   TRAITS=-DTRAITS_VV
 endif
 
+ifeq (${STRUCTURE}, LLS)
+  TRAITS=-DTRAITS_LL_S
+endif
+
 EXTRA_CXX_FLAGS+=${TRAITS}
 
 ifeq (${OUTPUT},1)
@@ -61,7 +69,7 @@ ifeq (${OUTPUT},1)
 endif
 
 CXX_FLAGS+=$(EXTRA_CXX_FLAGS) $(INCLUDE)
-LINKER_OPTIONS=$(CXX_FLAGS)
+LINKER_OPTIONS+=$(CXX_FLAGS)
 ALL_TARGETS=${TARGET} ${UNIT_TEST_TARGETS}
 
 all: ${ALL_TARGETS}
@@ -79,22 +87,11 @@ ${UNIT_TEST_TARGETS}:
 	${CXX} ${CXX_FLAGS} ${LIBS} -o $@ $@.cc $(LIBS)
 
 HMC.o:
-	${CXX} -c ${ROOT}/common/HMC.cpp
+	${CXX} -DUSE_OMP -c ${ROOT}/common/HMC.cpp
 
 SIM.o:
 	${CXX} -c ${ROOT}/common/SIM.cpp
 
-reset_generated_dir:
-	@if [ -n "${GENERATED_DIRS}" ]; then \
-          rm -rf ${GENERATED_DIRS}; \
-          mkdir ${GENERATED_DIRS};  \
-        fi
 
-run: ${TARGET} reset_generated_dir
-	@if [ -n "${TARGET}" ]; then \
-          echo "Running ${TARGET}, output in ${OUTPUT_LOG}"; \
-          ./${TARGET} ${RUN_ARGS} ${PERF_ARGS} > ${OUTPUT_LOG} 2>&1; \
-	fi
+include ${ROOT}/common.mk
 
-clean:
-	@-/bin/rm -rf ${ALL_TARGETS} ${GENERATED_DIRS} *.o *~ core core.* ${OUTPUT_LOG}

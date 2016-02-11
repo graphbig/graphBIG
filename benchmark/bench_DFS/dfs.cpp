@@ -174,10 +174,15 @@ int main(int argc, char * argv[])
     string vfile = path + "/vertex.csv";
     string efile = path + "/edge.csv";
 
+#ifndef EDGES_ONLY
     if (graph.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
     if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
+#else
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1)
+        return -1;
+#endif
     
     size_t vertex_num = graph.num_vertices();
     size_t edge_num = graph.num_edges();
@@ -199,6 +204,10 @@ int main(int argc, char * argv[])
     
     for (unsigned i=0;i<run_num;i++)
     {
+        vis.white_access=0;
+        vis.grey_access=0;
+        vis.black_access=0;
+
         t1 = timer::get_usec();
 
         dfs(graph, root, vis, perf, i);

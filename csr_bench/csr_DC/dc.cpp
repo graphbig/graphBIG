@@ -45,8 +45,12 @@ void seq_degree_centr(
     }
 
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== initialization time: "<<t2-t1<<" sec\n";
-
+#else
+    (void)t1;
+    (void)t2;
+#endif
 
     t1 = timer::get_usec();
 #ifdef SIM
@@ -72,7 +76,9 @@ void seq_degree_centr(
     SIM_END(true);
 #endif
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== process time: "<<t2-t1<<" sec\n";
+#endif
 }
 struct arg_t
 {
@@ -145,8 +151,12 @@ void parallel_degree_centr(
     }
 
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== initialization time: "<<t2-t1<<" sec\n";
-
+#else
+    (void)t1;
+    (void)t2;
+#endif
     unsigned unit = (unsigned)ceil(vertex_cnt/(double)threadnum);
 
     t1 = timer::get_usec();
@@ -223,6 +233,8 @@ void parallel_degree_centr(
     }
 #endif
     t2 = timer::get_usec();
+#ifndef ENABLE_VERIFY
     cout<<"== process time: "<<t2-t1<<" sec\n";
+#endif
 }
 

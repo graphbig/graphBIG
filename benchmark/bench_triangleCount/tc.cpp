@@ -11,14 +11,26 @@
 #include <vector>
 #include <algorithm>
 
+#ifdef HMC
+#include "HMC.h"
+#endif
+
+#ifdef SIM
+#include "SIM.h"
+#endif
+
 using namespace std;
+
+size_t maxiter = 0;
+size_t beginiter = 0;
+size_t enditer = 0;
 
 class vertex_property
 {
 public:
     vertex_property():count(0){}
 
-    uint64_t count;
+    int16_t count;
     std::vector<uint64_t> neighbor_set;
 };
 
@@ -36,7 +48,10 @@ typedef graph_t::vertex_iterator    vertex_iterator;
 typedef graph_t::edge_iterator      edge_iterator;
 
 //==============================================================//
-
+void arg_init(argument_parser & arg)
+{
+    arg.add_arg("maxiter","0","maximum loop iteration (0-unlimited, only set for simulation purpose)");
+}
 //==============================================================//
 size_t get_intersect_cnt(vector<size_t>& setA, vector<size_t>& setB)
 {
@@ -220,14 +235,22 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
         perf.start(tid, perf_group);  
         unsigned start = workset[tid];
         unsigned end = workset[tid+1];
+        if (maxiter != 0 && (start+maxiter) < end)
+            end = start + maxiter;
         if (end > g.num_vertices()) end = g.num_vertices();
         
         // for test only
         //if (end > (start+1000)) end = start+1000;
-
+#ifdef SIM
+        unsigned iter = 0;
+#endif
         // run triangle count now
         for (uint64_t vid=start;vid<end;vid++)
         {
+#ifdef SIM
+            SIM_BEGIN(iter==beginiter);
+            iter++;
+#endif
             vertex_iterator vit = g.find_vertex(vid);
 
             vector<uint64_t> & src_set = vit->property().neighbor_set;
@@ -239,10 +262,17 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
 
                 vector<uint64_t> & dest_set = vit_targ->property().neighbor_set;
                 size_t cnt = get_intersect_cnt(src_set, dest_set);
-
+#ifdef HMC
+                HMC_ADD_16B(&(vit->property().count),cnt);
+                HMC_ADD_16B(&(vit_targ->property().count),cnt);
+#else   
                 __sync_fetch_and_add(&(vit->property().count), cnt);
                 __sync_fetch_and_add(&(vit_targ->property().count), cnt);
+#endif
             }
+#ifdef SIM
+            SIM_END(iter==enditer);
+#endif
         }
         #pragma omp barrier 
         // tune the per-vertex count
@@ -252,7 +282,9 @@ size_t parallel_triangle_count(graph_t& g, unsigned threadnum, vector<unsigned>&
             vit->property().count /= 2;
             __sync_fetch_and_add(&ret, vit->property().count);
         }
-
+#ifdef SIM
+        SIM_END(enditer==0);
+#endif  
         perf.stop(tid, perf_group);
     }
 
@@ -288,6 +320,7 @@ int main(int argc, char * argv[])
 
     argument_parser arg;
     gBenchPerf_event perf;
+    arg_init(arg);
     if (arg.parse(argc,argv,perf,false)==false)
     {
         arg.help();
@@ -299,6 +332,11 @@ int main(int argc, char * argv[])
 
     size_t threadnum;
     arg.get_value("threadnum",threadnum);
+    arg.get_value("maxiter",maxiter);
+#ifdef SIM
+    arg.get_value("beginiter",beginiter);
+    arg.get_value("enditer",enditer);
+#endif
 
     double t1, t2;
     graph_t graph;
@@ -314,7 +352,7 @@ int main(int argc, char * argv[])
     if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
 #else
-    if (graph.load_csv_edges(path, true, separator, 0, 1) == -1)
+    if (graph.load_csv_edges(efile, true, separator, 0, 1) == -1)
         return -1;
 #endif
 
@@ -337,6 +375,8 @@ int main(int argc, char * argv[])
         //parallel_workset_init(graph, workset, arguments.threadnum);
         gen_workset(graph, workset, threadnum);
     }
+
+    if (maxiter != 0) cout<<"\nmax iteration: "<<maxiter;
     cout<<"\ncomputing triangle count..."<<endl;
     size_t tcount;
 

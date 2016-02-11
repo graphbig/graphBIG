@@ -554,7 +554,9 @@ protected:
             type = PERF_TYPE_HARDWARE;
             config = PERF_COUNT_HW_BUS_CYCLES;
         }
-        else if (ievent=="HW_STALLED_CYCLES_FRONTEND") 
+        // commented out for compatability concern
+        // older linux kernel may not support this
+        /*else if (ievent=="HW_STALLED_CYCLES_FRONTEND") 
         {
             type = PERF_TYPE_HARDWARE;
             config = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND;
@@ -563,7 +565,7 @@ protected:
         {
             type = PERF_TYPE_HARDWARE;
             config = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
-        }
+        }*/
         else if (ievent=="SW_CPU_CLOCK") 
         {
             type = PERF_TYPE_SOFTWARE;

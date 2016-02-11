@@ -103,6 +103,9 @@ int main(int argc, char * argv[])
     
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
+#else
+    (void)t1;
+    (void)t2;
 #endif
 
     //================================================//

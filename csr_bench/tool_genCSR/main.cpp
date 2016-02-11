@@ -79,8 +79,10 @@ int main(int argc, char * argv[])
     string vfile = path + "/vertex.csv";
     string efile = path + "/edge.csv";
 
+#ifndef EDGES_ONLY
     if (g.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
+#endif
     if (g.load_csv_edges(efile, true, separator, 0, 1) == -1) 
         return -1;
 

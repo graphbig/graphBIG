@@ -1,0 +1,19 @@
+sudo: false
+
+language: cpp
+
+compiler: 
+    - g++
+
+env:
+    global:
+        - OMP_NUM_THREADS=4
+        - TRAVIS=on
+
+before_script: ls
+
+script: 
+    - make -C benchmark all
+    - make -C csr_bench all
+    - make travis-verify
+

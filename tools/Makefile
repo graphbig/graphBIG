@@ -1,19 +1,21 @@
-PFM=libpfm-4.5.0
+PFMDIR=libpfm-4.5.0
 CXX=g++
 CXX_FLAGS=-I./include -L./lib -O3
 LIBS=-lpfm_cxx -lpfm
 
 
-all: libpfm.a libpfm_cxx.a
+all: lib/libpfm.a lib/libpfm_cxx.a
 
-libpfm.a: ${PFM}
-	(cd ${PFM}; make -j 4; cp lib/libpfm.a ../lib/; cp -r include/perfmon ../include/)
+lib/libpfm.a: ${PFMDIR}
+	${MAKE} -C ${PFMDIR} -j 4
+	cp ${PFMDIR}/lib/libpfm.a lib/
+	cp -r ${PFMDIR}/include/perfmon include/
 
-${PFM}:
-	rm -rf ${PFM}
-	tar xzvf ${PFM}.tar.gz
+${PFMDIR}:
+	rm -rf ${PFMDIR}
+	tar xzvf ${PFMDIR}.tar.gz
 
-libpfm_cxx.a: 
+lib/libpfm_cxx.a: 
 	make -C pfm_cxx all 
 
 test:
@@ -22,5 +24,5 @@ test:
 
 clean:
 	make -C pfm_cxx clean
-	rm -rf ${PFM} test *.o
+	rm -rf ${PFMDIR} test *.o
 

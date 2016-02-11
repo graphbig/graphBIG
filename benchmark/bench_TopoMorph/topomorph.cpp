@@ -7,10 +7,13 @@
 #include "def.h"
 #include "perf.h"
 #include "openG.h"
+#include "omp.h"
 #ifdef SIM
 #include "SIM.h"
 #endif
 using namespace std;
+
+unsigned threadnum=1;
 
 class vertex_property
 {
@@ -78,18 +81,73 @@ void moralize(graph_t & dag, graph_t & ug)
         }
     }
 }
+void parallel_moralize(graph_t & dag, graph_t & ug)
+{
+    // convert a DAG into an undirected graph
+    for (vertex_iterator vit=dag.vertices_begin(); vit!=dag.vertices_end(); vit++)
+    {
+        ug.add_vertex(vit->property());
+    }
+    for (vertex_iterator vit=dag.vertices_begin(); vit!=dag.vertices_end(); vit++)
+    {
+        for (edge_iterator eit=vit->edges_begin(); eit!=vit->edges_end(); eit++)
+        {
+            edge_iterator neweit;
+            if (ug.add_edge(vit->id(), eit->target(), neweit))
+                neweit->set_property(eit->property());
+        }
+    }
 
+    // for each node in the directed graph, make the parents
+    // pairwisely connected in the undirected graph
+    uint64_t chunk = (unsigned)ceil(dag.num_vertices()/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
+    {
+        unsigned tid = omp_get_thread_num();
+       
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > dag.num_vertices()) end = dag.num_vertices();
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif 
+        for (size_t i=start;i<end;i++) 
+        {
+            vertex_iterator vit = dag.find_vertex(i);
+            if (vit==dag.vertices_end()) continue;
+            for (edge_iterator pit=vit->preds_begin(); pit!=vit->preds_end(); pit++)
+            {
+                edge_iterator pit2 = pit;
+                pit2++;
+                for (; pit2!=vit->preds_end(); pit2++)
+                {
+                    uint64_t src = pit->target();     // src, targ are parents
+                    uint64_t targ = pit2->target();
+                    edge_iterator teit;
+                    if (!ug.find_out_edge(src, targ, teit))
+                    {
+                        edge_iterator tmpit;
+                        ug.add_edge(src, targ, tmpit);
+                    }
+                }
+            }
+        }
+#ifdef SIM
+        SIM_END(true);
+#endif 
+    }
+}
 //==============================================================//
 
 void output(graph_t& ug, std::string path)
 {
-    cout<<"Writing back ugraph...\n";
+    cout<<"ugraph results...\n";
     vertex_iterator vit;
     for (vit=ug.vertices_begin(); vit!=ug.vertices_end(); vit++)
     {
-        cout<<"== "<<vit->id()<<": ";
-        for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
-            cout<<eit->target()<<" ";
+        cout<<"== vertex "<<vit->id()<<": edge#-"<<vit->edges_size();
+        //for (edge_iterator eit=vit->edges_begin();eit!=vit->edges_end();eit++)
+        //    cout<<eit->target()<<" ";
         cout<<"\n";
     }
 }
@@ -111,6 +169,8 @@ int main(int argc, char * argv[])
     arg.get_value("dataset",path);
     arg.get_value("separator",separator);
 
+    arg.get_value("threadnum",threadnum);
+
     graph_t dag(openG::DIRECTED);
     double t1, t2;
 
@@ -119,12 +179,13 @@ int main(int argc, char * argv[])
     string vfile = path + "/vertex.csv";
     string efile = path + "/edge.csv";
 
+#ifndef EDGES_ONLY
     if (dag.load_csv_vertices(vfile, true, separator, 0) == -1)
         return -1;
+#endif
     // turn on dag_check for edge loading
     if (dag.load_csv_edges(efile, true, separator, 0, 1, true) == -1) 
         return -1;
-
 
     size_t vertex_num = dag.num_vertices();
     size_t edge_num = dag.num_edges();
@@ -149,13 +210,10 @@ int main(int argc, char * argv[])
         t1 = timer::get_usec();
         perf.open(i);
         perf.start(i);
-#ifdef SIM
-    SIM_BEGIN(true);
-#endif
-        moralize(dag, *ug);
-#ifdef SIM
-    SIM_END(true);
-#endif
+        if (threadnum==1)
+            moralize(dag, *ug);
+        else
+            parallel_moralize(dag, *ug);
         perf.stop(i);
         t2 = timer::get_usec();
         elapse_time += t2-t1;
@@ -169,7 +227,7 @@ int main(int argc, char * argv[])
 
 #ifdef ENABLE_OUTPUT
     cout<<"\n";
-    output(*ug, arguments.dataset_path);
+    output(*ug, path);
 #endif
     if (ug) delete ug;
     cout<<"==================================================================\n";

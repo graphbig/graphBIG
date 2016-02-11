@@ -2,6 +2,7 @@
 //
 
 #include <vector>
+#include <map>
 #include <string>
 #include <fstream>
 #include "common.h"
@@ -42,10 +43,15 @@ typedef graph_t::edge_iterator      edge_iterator;
 
 void output(vector<uint64_t> & vproplist)
 {
+    map<uint64_t,uint32_t> prop2id;
+    uint32_t id_gen = 0;
     cout<<"Connected Component Results:\n";
     for(size_t i=0;i<vproplist.size();i++)
     {
-        cout<<"== vertex "<<i<<": component "<<vproplist[i]<<endl;
+        if (prop2id.find(vproplist[i]) == prop2id.end())
+            prop2id[vproplist[i]] = id_gen++;
+
+        cout<<"== vertex "<<i<<": component "<<prop2id[vproplist[i]]<<endl;
     }
 }
 
@@ -95,6 +101,9 @@ int main(int argc, char * argv[])
     
 #ifndef ENABLE_VERIFY
     cout<<"== time: "<<t2-t1<<" sec\n";
+#else
+    (void)t1;
+    (void)t2;
 #endif
 
 

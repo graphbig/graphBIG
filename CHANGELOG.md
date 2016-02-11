@@ -1,3 +1,10 @@
+## Version 3.2
+- Add new CPU workloads: Page Rank, Graph Coloring
+- Change makefile structure
+- Add new make options: make verify, make help
+- Add travis-ci support
+- Multiple issue fixes
+
 ## Version 3.0
 - Change benchmark argument interfaces
 - Add CPU benchmarks using CSR data format

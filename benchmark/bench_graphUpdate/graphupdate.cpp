@@ -7,10 +7,14 @@
 #include "def.h"
 #include "perf.h"
 #include "openG.h"
-
+#include "omp.h"
+#ifdef SIM
+#include "SIM.h"
+#endif
 using namespace std;
 
 #define SEED 111
+unsigned threadnum;
 
 class vertex_property
 {
@@ -70,22 +74,36 @@ size_t input(string path, size_t num, vector<uint64_t> & q)
 
 //==============================================================//
 
-void graph_update(graph_t &g, vector<uint64_t> IDs)
+void graph_update(graph_t &g, vector<uint64_t>& IDs)
 {
-    for (size_t i=0;i<IDs.size();i++) 
+    unsigned chunk = (unsigned)ceil(IDs.size()/(double)threadnum);
+    #pragma omp parallel num_threads(threadnum)
     {
-        if (g.num_vertices()==0) break;
+        unsigned tid = omp_get_thread_num();
 
-        g.delete_vertex(IDs[i]);
+        unsigned start = tid*chunk;
+        unsigned end = start + chunk;
+        if (end > IDs.size()) end = IDs.size();
+#ifdef SIM
+        SIM_BEGIN(true);
+#endif 
+        for (size_t i=start;i<end;i++) 
+        {
+            if (g.num_vertices()==0) break;
+
+            g.delete_vertex(IDs[i]);
+        }
+#ifdef SIM
+        SIM_END(true);
+#endif 
     }
-    
 }
 
 //==============================================================//
 
 void output(graph_t& g)
 {
-    cout<<"Results: \n";
+    cout<<"\nResults: \n";
     vertex_iterator vit;
     for (vit=g.vertices_begin(); vit!=g.vertices_end(); vit++)
     {
@@ -110,22 +128,23 @@ int main(int argc, char * argv[])
     string path, separator;
     arg.get_value("dataset",path);
     arg.get_value("separator",separator);
-
+    arg.get_value("threadnum",threadnum);
     size_t delete_num;
     arg.get_value("delete",delete_num);
 
     unsigned run_num = ceil(perf.get_event_cnt() / (double)DEFAULT_PERF_GRP_SZ);
     if (run_num==0) run_num = 1;
 
+    double t1, t2;
     for (unsigned i=0;i<run_num;i++)
     {
+#ifndef ENABLE_VERIFY
         cout<<"\nRun #"<<i<<endl;
+        cout<<"loading data... \n";
+#endif
         srand(SEED); // fix seed to avoid runtime dynamics
         graph_t g;
-        double t1, t2;
         
-        cout<<"loading data... \n";
-
         t1 = timer::get_usec();
         string vfile = path + "/vertex.csv";
         string efile = path + "/edge.csv";
@@ -139,12 +158,10 @@ int main(int argc, char * argv[])
         if (g.load_csv_edges(path, true, separator, 0, 1) == -1)
             return -1;
 #endif
-        size_t vertex_num = g.num_vertices();
-        size_t edge_num = g.num_edges();
         t2 = timer::get_usec();
 
-        cout<<"== "<<vertex_num<<" vertices  "<<edge_num<<" edges\n";
-        
+        if (i==0)
+            cout<<"== "<<g.num_vertices()<<" vertices  "<<g.edge_num()<<" edges\n\n";
 #ifndef ENABLE_VERIFY
         cout<<"== time: "<<t2-t1<<" sec\n\n";
 #endif
@@ -165,19 +182,23 @@ int main(int argc, char * argv[])
 
         perf.stop(i);
         t2 = timer::get_usec();
-        cout<<"graph update finish: \n";
-        cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
-
+        if (i==(run_num-1))
+        {
+            cout<<"graph update finish: \n";
+            cout<<"== "<<g.num_vertices()<<" vertices  "<<g.num_edges()<<" edges\n";
+        }
 #ifndef ENABLE_VERIFY
         cout<<"== time: "<<t2-t1<<" sec\n";
+#else
+        (void)t1;
+        (void)t2;
+#endif
+#ifdef ENABLE_OUTPUT
+        if (i==(run_num-1)) output(g);
 #endif
     }
 #ifndef ENABLE_VERIFY
     perf.print();
-#endif
-#ifdef ENABLE_OUTPUT
-    cout<<"\n";
-    output(g);
 #endif
 
     cout<<"==================================================================\n";
