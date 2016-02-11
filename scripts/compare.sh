@@ -17,6 +17,10 @@ if [ -s ${DIFF_FILE} ];
 then
 	echo "TEST FAILED: please check ${DIFF_FILE} for details"
     echo "****************************************************"
+    if [ "$TRAVIS" == "on" ];
+    then
+        cat ${DIFF_FILE}
+    fi
     exit 1
 else
 	echo "TEST PASSED"
