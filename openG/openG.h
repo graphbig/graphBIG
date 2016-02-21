@@ -447,9 +447,108 @@ public:
 
         return true;
     }
+    bool load_CSR_Graph(const std::string& _graph_info)
+    {
+        std::ifstream fin;
+        std::string fn;
+
+        fn = _graph_info + "/verts_out.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.seekg(0, fin.end);
+        this->_vertex_num = (fin.tellg()/sizeof(uint64_t)) - 1;
+        fin.seekg(0, fin.beg);
+        fin.close();
+
+        fn = _graph_info + "/edges_out.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.seekg(0, fin.end);
+        this->_edge_num = fin.tellg()/sizeof(uint64_t);
+        fin.seekg(0, fin.beg);
+        fin.close();
+
+        _keymap.resize(this->_vertex_num);
+        _csr_verts_out.resize(this->_vertex_num+1);
+        _csr_verts_in.resize(this->_vertex_num+1);
+        _csr_edges_out.resize(this->_edge_num);
+        _csr_edges_in.resize(this->_edge_num);
+
+        fn = _graph_info + "/verts_out.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.read((char*)&(_csr_verts_out[0]),sizeof(uint64_t)*(this->_vertex_num+1));
+        fin.close();
+
+        fn = _graph_info + "/verts_in.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.read((char*)&(_csr_verts_in[0]),sizeof(uint64_t)*(this->_vertex_num+1));
+        fin.close();
+
+        fn = _graph_info + "/edges_out.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.read((char*)&(_csr_edges_out[0]),sizeof(uint64_t)*(this->_edge_num));
+        fin.close();
+
+        fn = _graph_info + "/verts_out.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.read((char*)&(_csr_edges_in[0]),sizeof(uint64_t)*(this->_edge_num));
+        fin.close();
+
+        fn = _graph_info + "/vmap.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.read((char*)&(_keymap[0]),sizeof(uint64_t)*(this->_vertex_num));
+        fin.close();
+
+        _csr_verts_prop.resize(this->_vertex_num);
+        return true;
+    }
+    uint64_t csr_in_edges_begin(uint64_t vid)
+    {
+        return _csr_verts_in[vid];
+    }
+    uint64_t csr_out_edges_begin(uint64_t vid)
+    {
+        return _csr_verts_out[vid];
+    }
+    uint64_t csr_out_edges_size(uint64_t vid)
+    {
+        return _csr_verts_out[vid+1] - _csr_verts_out[vid];
+    }
+    uint64_t csr_in_edges_size(uint64_t vid)
+    {
+        return _csr_verts_in[vid+1] - _csr_verts_in[vid];
+    }
+    uint64_t csr_out_edge(uint64_t edges_begin, uint64_t edge_num)
+    {
+        return _csr_edges_out[edges_begin+edge_num];
+    }
+    uint64_t csr_in_edge(uint64_t edges_begin, uint64_t edge_num)
+    {
+        return _csr_edges_in[edges_begin+edge_num];
+    }
+    uint64_t csr_external_id(uint64_t vid)
+    {
+        return _keymap[vid];
+    }
+    vproperty_t & csr_vertex_property(uint64_t vid)
+    {
+        return _csr_verts_prop[vid];
+    }
 protected:
     std::tr1::unordered_map<std::string, uint64_t> _key2id;
     std::tr1::unordered_map<uint64_t, std::string> _id2key;
+
+    std::vector<uint64_t> _csr_verts_out;
+    std::vector<uint64_t> _csr_verts_in;
+    std::vector<uint64_t> _csr_edges_out;
+    std::vector<uint64_t> _csr_edges_in;
+    std::vector<vproperty_t> _csr_verts_prop;
+    std::vector<uint64_t> _keymap;
 private:
     size_t csv_nextCell(std::string& line, std::string sepr, std::string& ret, size_t pos=0)
     {
