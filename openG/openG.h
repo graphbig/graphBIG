@@ -492,7 +492,7 @@ public:
         fin.read((char*)&(_csr_edges_out[0]),sizeof(uint64_t)*(this->_edge_num));
         fin.close();
 
-        fn = _graph_info + "/verts_out.csr";
+        fn = _graph_info + "/edges_in.csr";
         fin.open(fn.c_str(), std::ifstream::binary);
         if (!fin.is_open()) return false;
         fin.read((char*)&(_csr_edges_in[0]),sizeof(uint64_t)*(this->_edge_num));
