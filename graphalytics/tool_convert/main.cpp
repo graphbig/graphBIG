@@ -96,13 +96,11 @@ bool convert_vertices(string vfile, string outpath)
 }
 bool convert_edges(string efile, string outpath)
 {
-    string vfn = outpath + "/verts_out.csr";
-    string efn = outpath + "/edges_out.csr";
-
     vector<pair<uint64_t,uint64_t> > raw_edges;
 
     vector<uint64_t> verts,edges;
-
+    vector<double> weights;
+        
     // Load edges into in-mem buffer
     ifstream ifs;
     ifs.open(efile.c_str());
@@ -113,16 +111,31 @@ bool convert_edges(string efile, string outpath)
 
     while(ifs.good())
     {
+        string line;
+        getline(ifs, line);
+        if (line.empty()) continue;
+        if (line[0] == '#') continue;
+
         uint64_t src, dest;
-        ifs>>src>>dest;
-        if (ifs.eof()) break;
-        
+        double weight=0.0;
+
+        char * ptr = const_cast<char *>(line.c_str());
+
+        src = strtoll(ptr, &ptr, 10);
+        dest = strtoll(ptr, &ptr, 10);
+        weight = strtod(ptr, &ptr);
+
+        weights.push_back(weight);
         raw_edges.push_back(make_pair(idmap[src],idmap[dest]));
     }
 
     ifs.close();
 
     // prepare out-going edge file
+    string vfn = outpath + "/verts_out.csr";
+    string efn = outpath + "/edges_out.csr";
+    string wfn = outpath + "/eweights.csr";
+
     verts.resize(idmap.size()+1, 0);
     edges.resize(raw_edges.size());
 
@@ -153,6 +166,12 @@ bool convert_edges(string efile, string outpath)
     if (ofs.is_open())
     {
         ofs.write((char*)&(edges[0]), sizeof(uint64_t)*edges.size());
+    }
+    ofs.close();
+    ofs.open(wfn.c_str());
+    if (ofs.is_open())
+    {
+        ofs.write((char*)&(weights[0]), sizeof(double)*weights.size());
     }
     ofs.close();
 

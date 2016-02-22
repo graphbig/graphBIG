@@ -504,6 +504,12 @@ public:
         fin.read((char*)&(_keymap[0]),sizeof(uint64_t)*(this->_vertex_num));
         fin.close();
 
+        fn = _graph_info + "/eweights.csr";
+        fin.open(fn.c_str(), std::ifstream::binary);
+        if (!fin.is_open()) return false;
+        fin.read((char*)&(_csr_edges_out_weights[0]),sizeof(double)*(this->_edge_num));
+        fin.close();
+
         _csr_verts_prop.resize(this->_vertex_num);
         return true;
     }
@@ -539,6 +545,11 @@ public:
     {
         return _csr_verts_prop[vid];
     }
+    double csr_out_edge_weight(uint64_t edges_begin, uint64_t edge_num)
+    {
+        return _csr_edges_out_weights[edges_begin+edge_num];
+    }
+
 protected:
     std::tr1::unordered_map<std::string, uint64_t> _key2id;
     std::tr1::unordered_map<uint64_t, std::string> _id2key;
@@ -547,6 +558,7 @@ protected:
     std::vector<uint64_t> _csr_verts_in;
     std::vector<uint64_t> _csr_edges_out;
     std::vector<uint64_t> _csr_edges_in;
+    std::vector<double> _csr_edges_out_weights;
     std::vector<vproperty_t> _csr_verts_prop;
     std::vector<uint64_t> _keymap;
 private:
