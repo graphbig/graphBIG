@@ -473,6 +473,7 @@ public:
         _csr_verts_in.resize(this->_vertex_num+1);
         _csr_edges_out.resize(this->_edge_num);
         _csr_edges_in.resize(this->_edge_num);
+        _csr_edges_out_weights.resize(this->_edge_num);
 
         fn = _graph_info + "/verts_out.csr";
         fin.open(fn.c_str(), std::ifstream::binary);

@@ -103,11 +103,21 @@ bool convert_edges(string efile, string outpath)
         
     // Load edges into in-mem buffer
     ifstream ifs;
-    ifs.open(efile.c_str());
 
+    uint64_t filesize;
+    ifs.open(efile.c_str(), std::ifstream::binary);
+    if (!ifs.is_open()) return false;
+    ifs.seekg(0, ifs.end);
+    filesize = ifs.tellg();
+    ifs.seekg(0, ifs.beg);
+    ifs.close();
+
+    raw_edges.reserve(filesize / 10);
+    weights.reserve(filesize / 10);
+
+    ifs.open(efile.c_str());
     if (!ifs.is_open())
         return false;
-
 
     while(ifs.good())
     {
@@ -181,6 +191,8 @@ bool convert_edges(string efile, string outpath)
     efn = outpath + "/edges_in.csr";
 
     std::sort(raw_edges.begin(),raw_edges.end(),sort_pred());
+    verts.clear();
+    verts.resize(idmap.size()+1, 0);
 
     verts[0] = 0;
     edges[0] = raw_edges[0].first;
