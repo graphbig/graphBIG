@@ -473,7 +473,6 @@ public:
         _csr_verts_in.resize(this->_vertex_num+1);
         _csr_edges_out.resize(this->_edge_num);
         _csr_edges_in.resize(this->_edge_num);
-        _csr_edges_out_weights.resize(this->_edge_num);
 
         fn = _graph_info + "/verts_out.csr";
         fin.open(fn.c_str(), std::ifstream::binary);
@@ -507,8 +506,13 @@ public:
 
         fn = _graph_info + "/eweights.csr";
         fin.open(fn.c_str(), std::ifstream::binary);
-        if (!fin.is_open()) return false;
-        fin.read((char*)&(_csr_edges_out_weights[0]),sizeof(double)*(this->_edge_num));
+        if (fin.is_open())
+        {
+            _csr_edges_out_weights.resize(this->_edge_num);
+            fin.read((char*)&(_csr_edges_out_weights[0]),sizeof(double)*(this->_edge_num));
+        }
+        else
+            _csr_edges_out_weights.clear();
         fin.close();
 
         _csr_verts_prop.resize(this->_vertex_num);
@@ -548,7 +552,10 @@ public:
     }
     double csr_out_edge_weight(uint64_t edges_begin, uint64_t edge_num)
     {
-        return _csr_edges_out_weights[edges_begin+edge_num];
+        if (_csr_edges_out_weights.size() == 0)
+            return 0;
+        else
+            return _csr_edges_out_weights[edges_begin + edge_num];
     }
 
 protected:
