@@ -227,7 +227,7 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
     for (uint64_t i=1;i<verts.size();i++)
     {
         if (verts[i] == 0)
-            verts[i] = verts[i-1];
+            verts[i] = verts[i+1];
     }
 
     ofstream ofs;
@@ -275,7 +275,7 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
     for (uint64_t i=1;i<verts.size();i++)
     {
         if (verts[i] == 0)
-            verts[i] = verts[i-1];
+            verts[i] = verts[i+1];
     }
 
     ofs.open(vfn.c_str());
