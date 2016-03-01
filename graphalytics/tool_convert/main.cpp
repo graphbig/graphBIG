@@ -224,7 +224,7 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
     }
     verts[idmap.size()] = edges.size();
 
-    for (uint64_t i=verts.size()-2;i>1;i--)
+    for (uint64_t i=verts.size()-2;i>=1;i--)
     {
         if (verts[i] == 0)
             verts[i] = verts[i+1];
@@ -272,7 +272,7 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
     }
     verts[idmap.size()] = edges.size();
 
-    for (uint64_t i=verts.size()-2;i>1;i--)
+    for (uint64_t i=verts.size()-2;i>=1;i--)
     {
         if (verts[i] == 0)
             verts[i] = verts[i+1];
