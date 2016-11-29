@@ -205,13 +205,15 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
 
     std::sort(raw_edges.begin(), raw_edges.end(), sort_src());
 
+    uint64_t init_value = numeric_limits<uint64_t>::max();
     verts.clear();
-    verts.resize(idmap.size()+1, 0);
+    verts.resize(idmap.size()+1, init_value);
     edges.resize(raw_edges.size());
     if (enable_edge_weight)
         weights.resize(raw_edges.size());
 
     verts[0] = 0;
+    verts[raw_edges[0].src] = 0;
     edges[0] = raw_edges[0].dest;
     if (enable_edge_weight) weights[0] = raw_edges[0].weight;
     for (uint64_t i=1;i<raw_edges.size();i++)
@@ -226,7 +228,7 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
 
     for (uint64_t i=verts.size()-2;i>=1;i--)
     {
-        if (verts[i] == 0)
+        if (verts[i] == init_value)
             verts[i] = verts[i+1];
     }
 
@@ -260,9 +262,10 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
     std::sort(raw_edges.begin(),raw_edges.end(),sort_dest());
 
     verts.clear();
-    verts.resize(idmap.size()+1, 0);
+    verts.resize(idmap.size()+1, init_value);
 
     verts[0] = 0;
+    verts[raw_edges[0].dest] = 0;
     edges[0] = raw_edges[0].src;
     for (uint64_t i=1;i<raw_edges.size();i++)
     {
@@ -274,7 +277,7 @@ bool convert_edges(string efile, string outpath, bool undirected=false,
 
     for (uint64_t i=verts.size()-2;i>=1;i--)
     {
-        if (verts[i] == 0)
+        if (verts[i] == init_value)
             verts[i] = verts[i+1];
     }
 
