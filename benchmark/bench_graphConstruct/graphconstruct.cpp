@@ -8,6 +8,7 @@
 #include "perf.h"
 #include "openG.h"
 #include "omp.h"
+#include <algorithm>
 #ifdef SIM
 #include "SIM.h"
 #endif
@@ -112,6 +113,36 @@ void parallel_randomgraph_construction(graph_t &g, size_t vertex_num, size_t edg
 #endif 
 
     }
+
+    cout << "Validating random graph...";
+    // Check to make sure the graph was constructed correctly
+    vector<pair<size_t, size_t>> actual_edges;
+    actual_edges.reserve(edge_num);
+
+    for (vertex_iterator vit = g.vertices_begin(); vit != g.vertices_end(); ++vit)
+    {
+        for (edge_iterator eit = vit->out_edges_begin(); eit != vit->out_edges_end(); ++eit)
+        {
+            actual_edges.push_back(make_pair(vit->id(), eit->target()));
+        }
+    }
+
+    std::sort(edges.begin(), edges.end());
+    std::sort(actual_edges.begin(), actual_edges.end());
+
+    bool match = true;
+    if (edges.size() != actual_edges.size()) {
+        match = false;
+    } else {
+        auto mismatch = std::mismatch(edges.begin(), edges.end(), actual_edges.begin());
+        if (mismatch.first != edges.end()) {
+            match = false;
+        }
+    }
+
+    if (match) { cout << "OK\n"; }
+    else { cout << "FAIL\n"; }
+
 }
 
 //==============================================================//
