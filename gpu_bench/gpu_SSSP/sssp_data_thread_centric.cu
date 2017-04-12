@@ -89,8 +89,8 @@ void kernel(uint32_t * vplist,
     if (tid >= inworklist.get_item_num()) return;
 
     uint64_t v = inworklist.get_item(tid);
-    uint64_t e_begin = graph.get_edge_index_end(v);
-    uint64_t e_end = graph.get_firstedge_index(v);
+    uint64_t e_begin = graph.get_firstedge_index(v);
+    uint64_t e_end = graph.get_edge_index_end(v);
     uint32_t cost = vplist[v];
 
     uint64_t local_worklist[LOCAL_SIZE]; 
