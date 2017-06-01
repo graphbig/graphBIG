@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/graphbig/graphBIG.svg?branch=master)](https://travis-ci.org/graphbig/graphBIG)
 <pre style="display:inline-block;line-height:13px;">
   ________                    .__   __________.___  ________
  /  _____/___________  ______ |  |__\______   \   |/  _____/
