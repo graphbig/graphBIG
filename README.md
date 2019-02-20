@@ -108,5 +108,5 @@ Or submit issues via github
 
 **Graph Computing, Hell Yeah!**
 
-[IBM System G]:http://systemg.research.ibm.com/
+[IBM System G]:http://systemg.mybluemix.net/
 [libpfm]:http://perfmon2.sourceforge.net/
